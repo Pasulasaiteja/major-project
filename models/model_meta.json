@@ -1,0 +1,5 @@
+{
+  "input_dim": 24,
+  "num_rounds": 5,
+  "dp_epsilon_total": 2.5775
+}

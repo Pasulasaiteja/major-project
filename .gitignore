@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Databases & runtime SQLite files
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Scratch & temporary migration files
+home.txt
+login_temp.txt
+login_content.html
+compile_login.py
+patch_api.py
+patch_context.js
+patch_login.py
+extract_manager.py
+
+# System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

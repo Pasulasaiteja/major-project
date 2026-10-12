@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Federated Sentinel — Privacy-Preserving Fraud Detection</title>
+  <meta name="description" content="Federated Sentinel: Collaborative fraud defense with absolute privacy. Real-time fraud detection using Edge AI and Federated Learning."/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue:wght@400;500;700&family=Comfortaa:wght@300;400;500;600;700&family=Metrophobic:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Climate+Crisis:wght@100..900&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    if (localStorage.getItem('fs_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            surface: "#fcf8ff",
+            "on-tertiary": "#ffffff",
+            "on-primary-fixed-variant": "#4025c1",
+            "primary-fixed": "#e4dfff",
+            "surface-variant": "#e5e0ed",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f6f1fe",
+            "inverse-primary": "#c6bfff",
+            "surface-container-high": "#ebe6f3",
+            "surface-container-highest": "#e5e0ed",
+            "surface-container-lowest": "#ffffff",
+            "on-surface": "#1c1b23",
+            "secondary-fixed": "#e6deff",
+            "on-surface-variant": "#474555",
+            "on-secondary": "#ffffff",
+            "on-error-container": "#93000a",
+            "secondary-container": "#c4b8ff",
+            "primary-fixed-dim": "#c6bfff",
+            outline: "#787586",
+            "on-tertiary-fixed": "#301400",
+            "on-primary": "#ffffff",
+            "on-tertiary-container": "#fff8f5",
+            "on-error": "#ffffff",
+            primary: "#543fd5",
+            "on-primary-container": "#fcf8ff",
+            "secondary-fixed-dim": "#cabeff",
+            "on-background": "#1c1b23",
+            "tertiary-fixed": "#ffdcc5",
+            "surface-tint": "#5844d9",
+            "on-primary-fixed": "#170065",
+            "tertiary-fixed-dim": "#ffb781",
+            "on-secondary-fixed-variant": "#483e7b",
+            tertiary: "#8d4800",
+            "inverse-on-surface": "#f3effb",
+            "surface-bright": "#fcf8ff",
+            "surface-dim": "#dcd8e5",
+            error: "#ba1a1a",
+            "on-tertiary-fixed-variant": "#703800",
+            "tertiary-container": "#b15c00",
+            secondary: "#605695",
+            "on-secondary-container": "#504684",
+            background: "#fcf8ff",
+            "on-secondary-fixed": "#1c0f4e",
+            "outline-variant": "#c8c4d7",
+            "primary-container": "#6d5bef",
+            "inverse-surface": "#312f39",
+            "surface-container": "#f0ecf9"
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+            full: "9999px"
+          },
+          spacing: {
+            gutter: "1rem",
+            "space-xs": "0.25rem",
+            "margin-tablet": "1.5rem",
+            "gutter-desktop": "1.5rem",
+            "margin-desktop": "2rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-lg": "1.25rem",
+            "space-md": "0.75rem",
+            margin: "1rem"
+          },
+          fontFamily: {
+            "display-lg-mobile": ["Climate Crisis"],
+            "headline-md": ["Climate Crisis"],
+            "body-lg": ["Comfortaa"],
+            "body-sm": ["Comfortaa"],
+            "headline-sm": ["Climate Crisis"],
+            "label-mono-md": ["Metrophobic"],
+            "label-mono-lg": ["Metrophobic"],
+            "label-mono-sm": ["Metrophobic"],
+            "display-lg": ["Climate Crisis"],
+            "body-md": ["Comfortaa"],
+            "headline-lg": ["Climate Crisis"],
+            headline: ["Bebas Neue"],
+            display: ["Bebas Neue"],
+            body: ["Comfortaa"],
+            label: ["Metrophobic"]
+          },
+          fontSize: {
+            "display-lg-mobile": ["28px", { lineHeight: "36px", letterSpacing: "-0.015em", fontWeight: "700" }],
+            "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+            "body-sm": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+            "headline-sm": ["16px", { lineHeight: "24px", letterSpacing: "-0.005em", fontWeight: "600" }],
+            "label-mono-md": ["12px", { lineHeight: "16px", letterSpacing: "0em", fontWeight: "500" }],
+            "label-mono-lg": ["14px", { lineHeight: "20px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "label-mono-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.02em", fontWeight: "500" }],
+            "display-lg": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+            "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.015em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col">
+  <div id="app"></div>
+  <script src="api.js"></script>
+  <script src="router.js"></script>
+  <script src="pages/login.js"></script>
+  <script src="pages/register.js"></script>
+  <script src="pages/dashboard.js"></script>
+  <script src="pages/hold-reason.js"></script>
+  <script src="pages/access-restored.js"></script>
+  <script src="pages/landing.js"></script>
+  <script src="pages/investigation.js"></script>
+  <script src="pages/branch-verification.js"></script>
+  <script src="pages/profile.js"></script>
+  <script src="pages/raise-ticket.js"></script>
+  <script src="pages/ticket-status.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
