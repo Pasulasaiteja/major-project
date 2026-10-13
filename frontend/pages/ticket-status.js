@@ -11,6 +11,9 @@ window.TicketStatusPage = {
   _ticketToDelete: null,
 
   render: async () => {
+    // Clean up any previously attached modals from document.body to prevent duplicate elements
+    document.querySelectorAll('.app-modal').forEach(el => el.remove());
+
     const div = document.createElement('div');
     div.className = "min-h-screen bg-surface flex flex-col p-4 md:p-8 relative page-enter";
     div.innerHTML = `
@@ -106,22 +109,22 @@ window.TicketStatusPage = {
       </div>
 
       <!-- Delete Confirmation Modal -->
-      <div id="deleteModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-2xl p-6 max-w-sm w-full border border-outline-variant/30 shadow-2xl text-center page-enter">
-          <div class="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto mb-3">
-            <span class="material-symbols-outlined text-[24px]">delete</span>
+      <div id="deleteModal" class="app-modal" onclick="if(event.target === this) window.TicketStatusPage._closeDeleteModal()" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:999999; align-items:center; justify-content:center; padding:1.25rem; box-sizing:border-box;">
+        <div style="background:#ffffff; border-radius:1.25rem; padding:1.75rem; max-width:420px; width:100%; border:1px solid #e2e8f0; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35); text-align:center;">
+          <div style="width:52px; height:52px; border-radius:50%; background:rgba(220,38,38,0.12); color:#dc2626; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+            <span class="material-symbols-outlined" style="font-size:28px;">delete_forever</span>
           </div>
-          <h3 class="font-headline-sm text-[17px] font-bold text-on-surface mb-1">Delete Investigation Ticket?</h3>
-          <p class="font-body-sm text-[13px] text-on-surface-variant mb-5" id="deleteModalText">
-            Are you sure you want to permanently delete this dispute ticket?
+          <h3 style="font-size:18px; font-weight:700; color:#0f172a; margin-bottom:8px; font-family:'Comfortaa', sans-serif;">Delete Investigation Ticket?</h3>
+          <p id="deleteModalText" style="font-size:13px; color:#475569; line-height:1.5; margin-bottom:22px; font-family:'Comfortaa', sans-serif;">
+            Are you sure you want to permanently delete this dispute ticket? This action cannot be undone.
           </p>
-          <div class="flex gap-2">
-            <button onclick="window.TicketStatusPage._closeDeleteModal()" 
-              class="flex-1 py-2.5 rounded-xl border border-outline-variant/50 text-on-surface hover:bg-surface-container text-[13px] font-semibold transition-colors cursor-pointer">
+          <div style="display:flex; gap:10px;">
+            <button id="cancelDeleteBtn" type="button" onclick="window.TicketStatusPage._closeDeleteModal()" 
+              style="flex:1; padding:11px 0; border-radius:12px; border:1px solid #cbd5e1; background:#f8fafc; color:#334155; font-size:13px; font-weight:600; cursor:pointer; font-family:'Comfortaa', sans-serif; transition:all 0.15s;">
               Cancel
             </button>
-            <button onclick="window.TicketStatusPage._confirmDelete()" 
-              class="flex-1 py-2.5 rounded-xl bg-error text-on-error hover:bg-error/90 text-[13px] font-semibold transition-all shadow-sm cursor-pointer">
+            <button id="confirmDeleteBtn" type="button" onclick="window.TicketStatusPage._confirmDelete()" 
+              style="flex:1; padding:11px 0; border-radius:12px; border:none; background:#dc2626; color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; font-family:'Comfortaa', sans-serif; box-shadow:0 4px 12px rgba(220,38,38,0.3); transition:all 0.15s;">
               Yes, Delete
             </button>
           </div>
@@ -129,14 +132,14 @@ window.TicketStatusPage = {
       </div>
 
       <!-- Advance Status Modal (Flow Picker) -->
-      <div id="advanceModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full border border-outline-variant/30 shadow-2xl page-enter">
+      <div id="advanceModal" class="app-modal" onclick="if(event.target === this) window.TicketStatusPage._closeAdvanceModal()" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:999999; align-items:center; justify-content:center; padding:1.25rem; box-sizing:border-box;">
+        <div style="background:#ffffff; border-radius:1.25rem; padding:1.75rem; max-width:460px; width:100%; border:1px solid #e2e8f0; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);">
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">fast_forward</span>
+              <span class="material-symbols-outlined text-primary text-[22px]">fast_forward</span>
               <h3 class="font-headline-sm text-[17px] font-bold text-on-surface">Advance Investigation Flow</h3>
             </div>
-            <button onclick="window.TicketStatusPage._closeAdvanceModal()" class="text-on-surface-variant hover:text-on-surface">
+            <button type="button" onclick="window.TicketStatusPage._closeAdvanceModal()" class="text-on-surface-variant hover:text-on-surface cursor-pointer p-1 rounded-lg">
               <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
@@ -157,6 +160,22 @@ window.TicketStatusPage = {
     
     // Ensure initial demo tickets exist if empty and not explicitly cleared before
     window.TicketStatusPage._ensureDemoSeeded(phone);
+
+    // Mount modals directly to document.body so they are never constrained or clipped by container elements
+    ['deleteModal', 'advanceModal'].forEach(id => {
+      const modal = document.getElementById(id);
+      if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+    });
+
+    // Close modals on Escape key
+    window.onkeydown = (e) => {
+      if (e.key === 'Escape') {
+        window.TicketStatusPage._closeDeleteModal();
+        window.TicketStatusPage._closeAdvanceModal();
+      }
+    };
 
     // Setup filter listeners
     const filterTabs = document.querySelectorAll('.filter-tab');
@@ -498,9 +517,10 @@ window.TicketStatusPage = {
                   Advance Status
                 </button>
                 <button onclick="window.TicketStatusPage._openDeleteModal('${ticket.id}')"
-                  class="w-8 h-8 rounded-xl text-on-surface-variant/50 hover:text-error hover:bg-error-container/20 flex items-center justify-center transition-colors cursor-pointer"
+                  class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-error/70 bg-error/5 hover:bg-error/10 border border-error/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                   title="Delete this ticket">
-                  <span class="material-symbols-outlined text-[18px]">delete</span>
+                  <span class="material-symbols-outlined text-[16px]">delete</span>
+                  <span>Delete</span>
                 </button>
               </div>
             </div>
@@ -577,16 +597,32 @@ window.TicketStatusPage = {
   // --- Deletion Flow (Reliable & Clean) ---
   _openDeleteModal(ticketId) {
     window.TicketStatusPage._ticketToDelete = ticketId;
-    const modal = document.getElementById('deleteModal');
+    let modal = document.getElementById('deleteModal');
+    if (!modal) {
+      if (confirm(`Are you sure you want to permanently delete ticket ${ticketId}?`)) {
+        window.TicketStatusPage._ticketToDelete = ticketId;
+        window.TicketStatusPage._confirmDelete();
+      }
+      return;
+    }
+    // Guarantee modal is a child of document.body for true viewport positioning
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
     const text = document.getElementById('deleteModalText');
-    if (text) text.textContent = `Are you sure you want to permanently delete ticket ${ticketId}?`;
-    if (modal) modal.classList.remove('hidden');
+    if (text) text.textContent = `Are you sure you want to permanently delete ticket ${ticketId}? This action cannot be undone.`;
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
   },
 
   _closeDeleteModal() {
     window.TicketStatusPage._ticketToDelete = null;
     const modal = document.getElementById('deleteModal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    document.body.style.overflow = '';
   },
 
   _confirmDelete() {
@@ -681,12 +717,19 @@ window.TicketStatusPage = {
     }
 
     container.innerHTML = optionsHTML;
-    modal.classList.remove('hidden');
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
   },
 
   _closeAdvanceModal() {
     const modal = document.getElementById('advanceModal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    document.body.style.overflow = '';
   },
 
   _applyStatusChange(ticketId, newStatus) {

@@ -71,6 +71,8 @@ const Router = (() => {
     const appDiv = document.getElementById('app');
     if (!appDiv) return;
     appDiv.innerHTML = '';
+    document.querySelectorAll('.app-modal').forEach(m => m.remove());
+    document.body.style.overflow = '';
 
     if (component) {
       // Check auth state fresh from localStorage
