@@ -84,12 +84,20 @@ def init_db():
     
     # Auto-sync any existing flagged transactions into alerts table if missing
     cursor.execute("""
+        UPDATE transactions 
+        SET is_positive = 1,
+            subtext = 'Incoming International Transfer — Flagged for Review',
+            channel_type = 'Incoming International Wire'
+        WHERE entity LIKE '%Nexus%' OR subtext LIKE '%Overseas%'
+    """)
+
+    cursor.execute("""
         SELECT * FROM transactions WHERE status = 'Flagged' AND id NOT IN (SELECT transaction_id FROM alerts)
     """)
     flagged_txs = cursor.fetchall()
     for tx in flagged_txs:
         alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
-        explanation_text = "This transaction was placed on protective hold because an incoming overseas wire transfer of this magnitude heavily deviated from typical account behavior based on federated local inference."
+        explanation_text = "This incoming international transfer was placed on protective hold by your receiving bank because an overseas wire transfer of this magnitude heavily deviated from typical account behavior based on federated local inference."
         cursor.execute("""
             INSERT INTO alerts (alert_id, transaction_id, user_phone, bank_id, bank_name, risk_score, status, explanation_text, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -217,14 +225,14 @@ def seed_user_transactions(phone: str, name: str):
             "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
             "user_phone": phone,
             "entity": "Nexus International Wire",
-            "subtext": "High Risk Overseas Transfer",
+            "subtext": "Incoming International Transfer — Flagged for Review",
             "channel": "Inbound Wire",
-            "channel_type": "Net Banking Outbound / Wire",
+            "channel_type": "Incoming International Wire",
             "amount": 148500.0,
-            "is_positive": 0,
+            "is_positive": 1,
             "status": "Flagged",
             "category": "flagged",
-            "flag_reason": "High anomaly score detected by Federated Edge AI Model",
+            "flag_reason": "High anomaly score detected by Federated Edge AI Model (Receiving Bank Security Review)",
             "timestamp": "Today, 09:41 AM"
         }
     ]
@@ -238,7 +246,7 @@ def seed_user_transactions(phone: str, name: str):
         # If transaction is flagged, automatically seed a corresponding alert
         if tx["status"] == "Flagged":
             alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
-            explanation_text = "This transaction was placed on protective hold because an incoming overseas wire transfer of this magnitude heavily deviates from typical account behavior based on federated local inference."
+            explanation_text = "This incoming international transfer was placed on protective hold by your receiving bank because an overseas wire transfer of this magnitude heavily deviated from typical account behavior based on federated local inference."
             cursor.execute("""
                 INSERT INTO alerts (alert_id, transaction_id, user_phone, bank_id, bank_name, risk_score, status, explanation_text, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -216,8 +216,7 @@ window.DashboardPage = {
             // Find if there's an active alert for this tx
             const alert = alerts.find(a => String(a.transaction_id) === String(tx.id) && a.status === 'blocked');
             const isFlagged = tx.status === 'Flagged' || !!alert;
-            
-            const isOut = !tx.isPositive;
+            const isIncoming = tx.isPositive === true || tx.is_positive === 1 || String(tx.amount || '').startsWith('+') || (tx.channelType && tx.channelType.toLowerCase().includes('in')) || (tx.channel && tx.channel.toLowerCase().includes('inbound'));
             const entityStr = tx.entity || 'Transaction';
             const icon = entityStr.toLowerCase().includes('atm') ? 'local_atm' : 
                          entityStr.toLowerCase().includes('wire') ? 'account_balance' : 
@@ -225,29 +224,45 @@ window.DashboardPage = {
             
             let statusBadge = `<span class="px-2 py-0.5 rounded-full badge-cleared font-label-mono-sm text-[10px] font-semibold uppercase">${tx.status || 'Cleared'}</span>`;
             if (isFlagged) {
-              statusBadge = `<span class="px-2 py-0.5 rounded-full badge-blocked font-label-mono-sm text-[10px] font-semibold uppercase">Hold Applied</span>`;
+              statusBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-500/30 font-label-mono-sm text-[10px] font-semibold uppercase">Pending Security Review</span>`;
+            }
+
+            // Proper amount-sign formatting logic based on direction (receiving bank perspective)
+            let formattedAmount = tx.amount || '₹0.00';
+            if (typeof tx.raw_amount === 'number' || typeof tx.amount === 'number') {
+              const numVal = Math.abs(tx.raw_amount || tx.amount);
+              const sign = isIncoming ? '+' : '-';
+              formattedAmount = `${sign}₹${numVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            } else if (isIncoming && !formattedAmount.startsWith('+')) {
+              formattedAmount = '+' + formattedAmount.replace(/^[-+]/, '');
+            }
+
+            // Subtext: show receiving bank perspective for flagged incoming transfer
+            let subtextStr = tx.subtext || '';
+            if (entityStr.toLowerCase().includes('nexus') || subtextStr.toLowerCase().includes('overseas')) {
+              subtextStr = 'Incoming International Transfer — Flagged for Review';
             }
 
             const item = document.createElement('div');
-            item.className = `p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-surface-container-low transition-colors ${isFlagged ? 'bg-error-container/10 border-l-4 border-error' : ''}`;
+            item.className = `p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-surface-container-low transition-colors ${isFlagged ? 'bg-amber-500/5 border-l-4 border-amber-500' : ''}`;
             item.innerHTML = `
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-full ${isFlagged ? 'bg-error-container text-error' : 'bg-surface-container-high text-on-surface'} flex items-center justify-center shrink-0">
-                  <span class="material-symbols-outlined text-[20px]">${isFlagged ? 'warning' : icon}</span>
+                <div class="w-10 h-10 rounded-full ${isFlagged ? 'bg-amber-500/15 text-amber-700' : 'bg-surface-container-high text-on-surface'} flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[20px]">${isFlagged ? 'security' : icon}</span>
                 </div>
                 <div class="min-w-0 overflow-hidden">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="font-label-mono-lg text-label-mono-lg font-bold text-on-surface truncate">${entityStr}</span>
                     ${statusBadge}
                   </div>
-                  <span class="font-body-sm text-[12px] text-on-surface-variant truncate block mt-0.5">${tx.timestamp || ''} ${tx.subtext ? '• ' + tx.subtext : ''}</span>
+                  <span class="font-body-sm text-[12px] text-on-surface-variant truncate block mt-0.5">${tx.timestamp || ''} ${subtextStr ? '• ' + subtextStr : ''}</span>
                 </div>
               </div>
               <div class="text-right shrink-0">
-                <span class="font-label-mono-md text-label-mono-md font-bold ${isOut ? 'text-on-surface' : 'text-emerald-600'} block">
-                  ${tx.amount || '$0.00'}
+                <span class="font-label-mono-md text-label-mono-md font-bold ${isFlagged ? 'text-amber-800' : (isIncoming ? 'text-emerald-600' : 'text-on-surface')} block">
+                  ${formattedAmount}
                 </span>
-                ${isFlagged ? `<button class="text-primary font-label-mono-sm text-[10px] font-bold uppercase mt-1 hover:underline resolve-btn" data-id="${tx.id}">${tx.actionText || 'Review'}</button>` : ''}
+                ${isFlagged ? `<span class="block text-[10px] text-amber-700/80 font-mono font-medium">Funds Not Credited</span><button class="text-primary font-label-mono-sm text-[10px] font-bold uppercase mt-1 hover:underline resolve-btn" data-id="${tx.id}">${tx.actionText || 'Review Flag'}</button>` : ''}
               </div>
             `;
             txList.appendChild(item);

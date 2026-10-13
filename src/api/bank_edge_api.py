@@ -574,16 +574,16 @@ def init_mock_db():
         
         TRANSACTIONS_DB.insert(0, {
             "id": tx_id,
-            "entity": "Nexus Clearing LLC",
-            "subtext": f"Incoming Wire Transfer #{tx_id}",
+            "entity": "Nexus International Wire",
+            "subtext": "Incoming International Transfer — Flagged for Review",
             "channel": "Inbound Wire",
-            "channelType": "Net Banking Outbound / Wire",
-            "amount": "+$14,850.00",
+            "channelType": "Incoming International Wire",
+            "amount": "+₹1,48,500.00",
             "isPositive": True,
             "status": "Flagged",
             "category": "flagged",
-            "timestamp": "Today, 09:41 AM EST",
-            "flagReason": "High risk score by federated model",
+            "timestamp": "Today, 09:41 AM IST",
+            "flagReason": "High anomaly score detected by Federated Edge AI Model (Receiving Bank Security Review)",
             "actionText": "Review Flag"
         })
 
