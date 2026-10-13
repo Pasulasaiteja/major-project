@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.add('/hold-reason', window.HoldReasonPage);
   Router.add('/access-restored', window.AccessRestoredPage);
   Router.add('/investigation', window.InvestigationPage);
+  Router.add('/branch-verification', window.BranchVerificationPage);
   Router.add('/raise-ticket', window.RaiseTicketPage);
   Router.add('/profile', window.ProfilePage);
 
