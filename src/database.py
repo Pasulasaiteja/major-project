@@ -84,20 +84,12 @@ def init_db():
     
     # Auto-sync any existing flagged transactions into alerts table if missing
     cursor.execute("""
-        UPDATE transactions 
-        SET is_positive = 1,
-            subtext = 'Incoming International Transfer — Flagged for Review',
-            channel_type = 'Incoming International Wire'
-        WHERE entity LIKE '%Nexus%' OR subtext LIKE '%Overseas%'
-    """)
-
-    cursor.execute("""
         SELECT * FROM transactions WHERE status = 'Flagged' AND id NOT IN (SELECT transaction_id FROM alerts)
     """)
     flagged_txs = cursor.fetchall()
     for tx in flagged_txs:
         alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
-        explanation_text = "This incoming international transfer was placed on protective hold by your receiving bank because an overseas wire transfer of this magnitude heavily deviated from typical account behavior based on federated local inference."
+        explanation_text = tx.get("flag_reason") or "This domestic transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹25,000.00 heavily deviated from your normal domestic account behavior based on federated local edge inference."
         cursor.execute("""
             INSERT INTO alerts (alert_id, transaction_id, user_phone, bank_id, bank_name, risk_score, status, explanation_text, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -105,6 +97,9 @@ def init_db():
 
     conn.commit()
     conn.close()
+    
+    # Ensure demo accounts exist with realistic domestic transactions
+    seed_demo_accounts()
 
 # ─────────────────────────────────────────
 # User Operations
@@ -131,8 +126,9 @@ def register_user(phone: str, name: str, pin: str, bank_id: str = "bank_1", bank
     conn.commit()
     conn.close()
     
-    # Seed initial transactions for new user
-    seed_user_transactions(clean_phone, name)
+    # Requirement: Remove/comment out seed_user_transactions so every newly created
+    # user account starts completely clean with zero transactions.
+    # seed_user_transactions(clean_phone, name)
     
     return {
         "phone": clean_phone,
@@ -181,26 +177,62 @@ def get_user_by_phone(phone: str) -> Optional[Dict]:
 # Transaction Operations
 # ─────────────────────────────────────────
 
-def seed_user_transactions(phone: str, name: str):
-    """Create default initial transaction history for newly registered accounts."""
+def seed_demo_accounts():
+    """Seeds dedicated demo user accounts (e.g., 9999999999, 9876543210, and 9988776655) with realistic domestic transaction data."""
     conn = get_connection()
+    cursor = conn.cursor()
+    
+    demo_users = [
+        ("9999999999", "Demo Account", "1234"),
+        ("9876543210", "Saiteja Pasula (Demo)", "1234"),
+        ("9988776655", "Rajesh Sharma", "4321")
+    ]
+    
+    for phone, name, pin in demo_users:
+        cursor.execute("SELECT * FROM users WHERE phone = ?", (phone,))
+        if not cursor.fetchone():
+            cursor.execute("""
+                INSERT INTO users (phone, name, bank_id, bank_name, pin_hash, role)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (phone, name, 'bank_1', 'Nagaland Regional Bank', hash_pin(pin), 'client'))
+        
+        cursor.execute("SELECT COUNT(*) as count FROM transactions WHERE user_phone = ?", (phone,))
+        if cursor.fetchone()["count"] == 0:
+            seed_user_transactions(phone, name, conn=conn)
+            
+    conn.commit()
+    conn.close()
+
+def seed_user_transactions(phone: str, name: str, conn=None):
+    """
+    Creates realistic domestic transaction data for demo accounts:
+    1. Normal Salary/Income Deposit (local employer NEFT deposit, +₹45,000.00).
+    2. Normal Retail Purchase (local supermarket UPI/POS payment, -₹1,250.00).
+    3. Domestic Flagged Transaction (suspicious late-night ATM cash withdrawal, -₹25,000.00,
+       flagged by the Federated Edge AI Model as a domestic anomaly pattern such as an ATM skimmer).
+    """
+    close_conn = False
+    if conn is None:
+        conn = get_connection()
+        close_conn = True
     cursor = conn.cursor()
     
     # Check if already seeded
     cursor.execute("SELECT COUNT(*) as count FROM transactions WHERE user_phone = ?", (phone,))
     if cursor.fetchone()["count"] > 0:
-        conn.close()
+        if close_conn:
+            conn.close()
         return
 
     sample_txs = [
         {
             "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
             "user_phone": phone,
-            "entity": "Salary Deposit",
-            "subtext": "TechCorp India Pvt Ltd",
+            "entity": "TechCorp India Payroll",
+            "subtext": "Employer NEFT Salary Deposit",
             "channel": "NEFT Transfer",
-            "channel_type": "Direct Deposit",
-            "amount": 75000.0,
+            "channel_type": "Direct Bank Credit",
+            "amount": 45000.0,
             "is_positive": 1,
             "status": "Completed",
             "category": "income",
@@ -210,11 +242,11 @@ def seed_user_transactions(phone: str, name: str):
         {
             "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
             "user_phone": phone,
-            "entity": "Reliance Retail Store",
-            "subtext": "Point of Sale Payment",
-            "channel": "Debit Card POS",
-            "channel_type": "POS Terminal",
-            "amount": 3450.0,
+            "entity": "Local Supermarket Store",
+            "subtext": "Supermarket UPI / POS Payment",
+            "channel": "UPI / POS Debit",
+            "channel_type": "Retail POS Terminal",
+            "amount": 1250.0,
             "is_positive": 0,
             "status": "Completed",
             "category": "shopping",
@@ -224,16 +256,16 @@ def seed_user_transactions(phone: str, name: str):
         {
             "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
             "user_phone": phone,
-            "entity": "Nexus International Wire",
-            "subtext": "Incoming International Transfer — Flagged for Review",
-            "channel": "Inbound Wire",
-            "channel_type": "Incoming International Wire",
-            "amount": 148500.0,
-            "is_positive": 1,
+            "entity": "Late-Night ATM Cash Withdrawal",
+            "subtext": "Suspicious Off-Hours ATM Withdrawal — Terminal #0842",
+            "channel": "Domestic ATM Debit",
+            "channel_type": "Domestic ATM Cash Withdrawal",
+            "amount": 25000.0,
+            "is_positive": 0,
             "status": "Flagged",
             "category": "flagged",
-            "flag_reason": "High anomaly score detected by Federated Edge AI Model (Receiving Bank Security Review)",
-            "timestamp": "Today, 09:41 AM"
+            "flag_reason": "High anomaly score detected by Federated Edge AI Model (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)",
+            "timestamp": "Today, 02:41 AM"
         }
     ]
 
@@ -246,16 +278,22 @@ def seed_user_transactions(phone: str, name: str):
         # If transaction is flagged, automatically seed a corresponding alert
         if tx["status"] == "Flagged":
             alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
-            explanation_text = "This incoming international transfer was placed on protective hold by your receiving bank because an overseas wire transfer of this magnitude heavily deviated from typical account behavior based on federated local inference."
+            explanation_text = "This domestic transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹25,000.00 heavily deviated from your normal domestic account behavior based on federated local edge inference (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)."
             cursor.execute("""
                 INSERT INTO alerts (alert_id, transaction_id, user_phone, bank_id, bank_name, risk_score, status, explanation_text, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (alert_id, tx["id"], phone, "bank_1", "Nagaland Regional Bank", 0.9420, "blocked", explanation_text, tx["timestamp"]))
     
-    conn.commit()
-    conn.close()
+    if close_conn:
+        conn.commit()
+        conn.close()
 
 def get_transactions_by_user(phone: str) -> List[Dict]:
+    """
+    Returns transactions for a given user.
+    If no transactions exist for the user, returns an empty list []
+    rather than falling back to global mock transactions.
+    """
     clean_phone = phone.replace("-", "").replace(" ", "")
     conn = get_connection()
     cursor = conn.cursor()
@@ -265,6 +303,9 @@ def get_transactions_by_user(phone: str) -> List[Dict]:
     """, (clean_phone,))
     rows = cursor.fetchall()
     conn.close()
+    
+    if not rows:
+        return []
     
     results = []
     for r in rows:

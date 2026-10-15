@@ -384,15 +384,15 @@ window.HoldReasonPage = {
       if (!tx) {
         isDemo = true;
         tx = {
-          id: txId || 'TXN-3708CF',
-          entity: 'Nexus International Wire Clearing LLC',
-          merchant: 'Nexus International Wire',
-          amount: 148500.0,
-          raw_amount: 148500.0,
-          isPositive: true,
-          subtext: 'Incoming International Transfer — Flagged for Review',
+          id: txId || 'TXN-ATM084',
+          entity: 'Late-Night ATM Cash Withdrawal',
+          merchant: 'Domestic ATM Network',
+          amount: 25000.0,
+          raw_amount: 25000.0,
+          isPositive: false,
+          subtext: 'Suspicious Off-Hours ATM Withdrawal — Terminal #0842',
           status: 'Flagged',
-          timestamp: 'Today, 09:41:28 AM IST'
+          timestamp: 'Today, 02:41 AM'
         };
       }
 
@@ -400,58 +400,71 @@ window.HoldReasonPage = {
         alert = alerts.find(a => a.status === 'blocked') || {
           transaction_id: tx.id,
           risk_score: 0.9420,
-          explanation_text: tx.flagReason || "As your receiving bank, our local edge AI flagged this incoming overseas wire transfer of +₹1,48,500.00 because it deviates significantly from expected account behavior based on federated local inference."
+          explanation_text: tx.flagReason || "This domestic transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹25,000.00 heavily deviated from your normal domestic account behavior based on federated local edge inference (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)."
         };
       }
 
       // Check if this is a demo/simulated transaction (Requirement 10)
       const demoTag = document.getElementById('tx-demo-tag');
       if (demoTag) {
-        const isSimulated = isDemo || String(tx.id).includes('FLAGGED') || String(tx.id).includes('3708CF') || String(tx.entity).includes('Nexus');
+        const isSimulated = isDemo || String(tx.id).includes('FLAGGED') || String(tx.id).includes('3708CF') || String(tx.entity).includes('Nexus') || String(tx.entity).includes('ATM');
         demoTag.textContent = isSimulated ? 'Demo Data' : 'Live Incident';
       }
 
-      const txRef = tx.id ? (tx.id.startsWith('TXN-') ? tx.id : `TXN-${tx.id.slice(-6).toUpperCase()}`) : 'TXN-3708CF';
+      const txRef = tx.id ? (tx.id.startsWith('TXN-') ? tx.id : `TXN-${tx.id.slice(-6).toUpperCase()}`) : 'TXN-ATM084';
       
-      // Requirement 1 & 9: Dynamic amount formatting logic with + sign for incoming transfers
-      const isIncoming = tx.isPositive === true || tx.is_positive === 1 || String(tx.amount || '').startsWith('+') || (tx.channelType && tx.channelType.toLowerCase().includes('in')) || true;
+      // Dynamic amount formatting logic with + sign for incoming transfers, - for debits
+      const isIncoming = tx.isPositive === true || tx.is_positive === 1 || String(tx.amount || '').startsWith('+') || (tx.channelType && tx.channelType.toLowerCase().includes('inbound'));
       const cleanAmt = typeof tx.raw_amount === 'number'
         ? Math.abs(tx.raw_amount)
         : (typeof tx.amount === 'number' 
             ? Math.abs(tx.amount) 
-            : parseFloat(String(tx.amount || '').replace(/[^0-9.]/g, '')) || 148500.0);
+            : parseFloat(String(tx.amount || '').replace(/[^0-9.]/g, '')) || 25000.0);
       const signPrefix = isIncoming ? '+' : '-';
       const formattedAmount = `${signPrefix}₹${cleanAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-      // Requirement 6 & 7: Check if backend confirms actual credit
+      // Check if backend confirms actual credit / completion
       const isCredited = tx.status === 'Completed' || tx.status === 'Credited';
       const creditBadgeText = isCredited 
-        ? 'Funds Successfully Credited' 
-        : 'Pending Security Review • Funds Not Credited';
+        ? 'Funds Successfully Settled' 
+        : (isIncoming ? 'Pending Security Review • Funds Not Credited' : 'Security Hold Active • Transaction Blocked');
       const receivingStatusText = isCredited 
         ? 'Successfully Credited to Account' 
         : 'Pending Security Review (Not Yet Credited)';
 
       // 1. Overview data
       const merchantEl = document.getElementById('tx-merchant');
-      if (merchantEl) merchantEl.textContent = tx.merchant || tx.entity || 'Nexus International Wire';
+      if (merchantEl) merchantEl.textContent = tx.merchant || tx.entity || 'Late-Night ATM Cash Withdrawal';
 
-      // Requirement 1: Display as +₹1,48,500.00
       const amountEl = document.getElementById('tx-amount');
       if (amountEl) {
         amountEl.textContent = formattedAmount;
       }
 
-      // Requirement 3: Replace with "Incoming International Transfer — Flagged for Review"
+      const dirLabelEl = document.getElementById('tx-direction-label');
+      if (dirLabelEl) {
+        if (isIncoming) {
+          dirLabelEl.innerHTML = `
+            <span class="material-symbols-outlined text-[16px]">south_west</span>
+            Incoming International Transfer
+          `;
+        } else {
+          dirLabelEl.innerHTML = `
+            <span class="material-symbols-outlined text-[16px]">north_east</span>
+            Domestic Transaction &bull; Flagged Edge Anomaly
+          `;
+        }
+      }
+
       const locationEl = document.getElementById('tx-location');
       if (locationEl) {
-        locationEl.textContent = 'Incoming International Transfer — Flagged for Review';
+        locationEl.textContent = tx.subtext || (isIncoming ? 'Incoming International Transfer — Flagged for Review' : 'Domestic Transaction — Flagged for Review');
       }
 
       const refIdEl = document.getElementById('tx-ref-id');
       if (refIdEl) refIdEl.textContent = `Ref: #${txRef}`;
 
-      // Requirement 6 & 7: Status badge
+      // Status badge
       const creditBadgeEl = document.getElementById('tx-credit-badge');
       if (creditBadgeEl) {
         creditBadgeEl.innerHTML = `
@@ -460,25 +473,35 @@ window.HoldReasonPage = {
         `;
       }
 
-      // Requirement 5: Sender details (SENDER — Overseas Bank)
+      // Sender / Originating Source details
       const senderNameEl = document.getElementById('tx-sender-name');
-      if (senderNameEl) senderNameEl.textContent = tx.senderName || tx.entity || 'Nexus International Wire Clearing LLC';
+      if (senderNameEl) {
+        senderNameEl.textContent = isIncoming ? (tx.senderName || tx.entity || 'Nexus International Wire Clearing LLC') : (tx.entity || 'Late-Night ATM Cash Withdrawal');
+      }
 
       const senderAccountEl = document.getElementById('tx-sender-account');
-      if (senderAccountEl) senderAccountEl.textContent = tx.senderAccount || 'A/C •••• 9842 (IBAN: GB82 MIDL 4005 1512 3456)';
+      if (senderAccountEl) {
+        senderAccountEl.textContent = isIncoming ? (tx.senderAccount || 'A/C •••• 9842 (IBAN: GB82 MIDL 4005 1512 3456)') : 'Terminal #0842 (Domestic Network Node)';
+      }
 
       const senderBankEl = document.getElementById('tx-sender-bank');
-      if (senderBankEl) senderBankEl.textContent = tx.senderBank || 'Standard Chartered Bank (London Gateway Branch)';
+      if (senderBankEl) {
+        senderBankEl.textContent = isIncoming ? (tx.senderBank || 'Standard Chartered Bank (London Gateway Branch)') : 'Domestic Interbank ATM Switch';
+      }
 
       const senderLocationEl = document.getElementById('tx-sender-location');
-      if (senderLocationEl) senderLocationEl.textContent = tx.senderLocation || 'London, UK (Reported IP: 185.220.101.5)';
+      if (senderLocationEl) {
+        senderLocationEl.textContent = isIncoming ? (tx.senderLocation || 'London, UK (Reported IP: 185.220.101.5)') : 'Local ATM Kiosk • Sector 4 Market (02:41 AM)';
+      }
 
       const senderChannelEl = document.getElementById('tx-sender-channel');
-      if (senderChannelEl) senderChannelEl.textContent = tx.channel || 'SWIFT Inbound Wire MT103';
+      if (senderChannelEl) {
+        senderChannelEl.textContent = tx.channel || (isIncoming ? 'SWIFT Inbound Wire MT103' : 'Domestic ATM Debit');
+      }
 
-      // Requirement 5: Recipient details (RECEIVING ACCOUNT — Your Bank)
+      // Recipient details (RECEIVING ACCOUNT — Your Bank)
       const recipientNameEl = document.getElementById('tx-recipient-name');
-      if (recipientNameEl) recipientNameEl.textContent = `${activeName} (Recipient Beneficiary)`;
+      if (recipientNameEl) recipientNameEl.textContent = `${activeName} (${isIncoming ? 'Recipient Beneficiary' : 'Account Holder'})`;
 
       const recipientAccountEl = document.getElementById('tx-recipient-account');
       if (recipientAccountEl) recipientAccountEl.textContent = `A/C •••• ${activePhone.slice(-4)} (Primary Savings)`;
@@ -491,11 +514,12 @@ window.HoldReasonPage = {
 
       const recipientStatusEl = document.getElementById('tx-recipient-status');
       if (recipientStatusEl) {
-        recipientStatusEl.textContent = receivingStatusText;
-        if (isCredited) {
-          recipientStatusEl.className = "font-semibold text-emerald-700 text-right";
+        if (!isIncoming) {
+          recipientStatusEl.textContent = isCredited ? 'Settled Successfully' : 'Protected • Transaction Blocked at Edge';
+          recipientStatusEl.className = isCredited ? 'font-semibold text-emerald-700 text-right' : 'font-semibold text-rose-800 text-right';
         } else {
-          recipientStatusEl.className = "font-semibold text-amber-900 text-right";
+          recipientStatusEl.textContent = receivingStatusText;
+          recipientStatusEl.className = isCredited ? "font-semibold text-emerald-700 text-right" : "font-semibold text-amber-900 text-right";
         }
       }
 

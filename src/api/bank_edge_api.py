@@ -403,10 +403,13 @@ def predict_locally(tx: TransactionRequest):
 @app.get("/alerts", tags=["Alerts"])
 def get_local_alerts(phone: Optional[str] = None, status: Optional[str] = None):
     """Returns fraud alerts from the SQLite database."""
-    db_alerts = database.get_alerts_by_user(phone=phone, status=status)
+    if phone:
+        clean_phone = phone.replace("-", "").replace(" ", "")
+        return database.get_alerts_by_user(phone=clean_phone, status=status)
+    db_alerts = database.get_alerts_by_user(phone=None, status=status)
     if db_alerts:
         return db_alerts
-    # Fallback to in-memory if db has no entries yet
+    # Fallback to in-memory if db has no entries yet and no phone was specified
     return [a for a in LOCAL_ALERTS if (not status or a.get("status") == status)]
 
 
@@ -497,131 +500,69 @@ TRANSACTIONS_DB = []
 def init_mock_db():
     if len(TRANSACTIONS_DB) > 0: return
 
-    # Clean normal transactions
-    TRANSACTIONS_DB.append({
-        "id": "TXN-82011",
-        "entity": "Cash Withdrawal",
-        "subtext": "Downtown Branch ATM #04",
-        "channel": "Terminal Debit",
-        "channelType": "ATM Cash Withdrawal",
-        "amount": "-$200.00",
-        "isPositive": False,
-        "status": "Completed",
-        "category": "withdrawals",
-        "timestamp": "Today, 08:30 AM"
-    })
-    
-    TRANSACTIONS_DB.append({
-        "id": "TXN-82012",
-        "entity": "Groceries UP",
-        "subtext": "Supermarket Varanasi",
-        "channel": "POS Debit",
-        "channelType": "Card Payment",
-        "amount": "-$45.50",
-        "isPositive": False,
-        "status": "Completed",
-        "category": "shopping",
-        "timestamp": "Today, 09:15 AM"
-    })
-    
-    TRANSACTIONS_DB.append({
-        "id": "TXN-82013",
-        "entity": "Salary Deposit",
-        "subtext": "TechCorp India Pvt Ltd",
-        "channel": "NEFT Transfer",
-        "channelType": "Direct Deposit",
-        "amount": "+$4,500.00",
-        "isPositive": True,
-        "status": "Completed",
-        "category": "income",
-        "timestamp": "Yesterday, 10:00 AM"
-    })
-    
-    # Let's generate a fraudulent transaction by calling predict_locally internally!
-    # We will simulate a high probability fraud request.
-    tx_req = TransactionRequest(
-        age=22,
-        transaction_amount=150000.0,
-        account_balance=50.0,
-        gender="Male",
-        account_type="Checking",
-        transaction_type="Wire",
-        merchant_category="Crypto",
-        device_type="Unknown",
-        state="Unknown"
-    )
-    
     try:
-        # Evaluate it
-        model, preprocessor, feature_names, background = get_edge_model()
-        row = pd.DataFrame([{
-            'Age': tx_req.age,
-            'Transaction_Amount': tx_req.transaction_amount,
-            'Account_Balance': tx_req.account_balance,
-            'Gender': tx_req.gender,
-            'Account_Type': tx_req.account_type,
-            'Transaction_Type': tx_req.transaction_type,
-            'Merchant_Category': tx_req.merchant_category,
-            'Device_Type': tx_req.device_type,
-            'State': tx_req.state,
-        }])
-        X_enc = preprocessor.transform(row)
-        x_tensor = torch.FloatTensor(X_enc)
-        risk_score = float(model(x_tensor).squeeze())
+        # Clean normal domestic transactions
+        TRANSACTIONS_DB.append({
+            "id": "TXN-82011",
+            "entity": "TechCorp India Payroll",
+            "subtext": "Employer NEFT Salary Deposit",
+            "channel": "NEFT Transfer",
+            "channelType": "Direct Bank Credit",
+            "amount": "+₹45,000.00",
+            "isPositive": True,
+            "status": "Completed",
+            "category": "income",
+            "timestamp": "Yesterday, 10:00 AM"
+        })
         
-        is_fraud = risk_score > 0.5
+        TRANSACTIONS_DB.append({
+            "id": "TXN-82012",
+            "entity": "Local Supermarket Store",
+            "subtext": "Supermarket UPI / POS Payment",
+            "channel": "UPI / POS Debit",
+            "channelType": "Retail POS Terminal",
+            "amount": "-₹1,250.00",
+            "isPositive": False,
+            "status": "Completed",
+            "category": "shopping",
+            "timestamp": "Today, 08:15 AM"
+        })
+        
+        # Domestic Flagged Transaction (Suspicious late-night ATM withdrawal)
         tx_id = f"TXN-{str(uuid.uuid4())[:5].upper()}"
         ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        
-        explainer = shap.GradientExplainer(model, background)
-        sv_raw = explainer.shap_values(x_tensor)
-        sv_matrix = np.array(sv_raw[0] if isinstance(sv_raw, list) else sv_raw)
-        if sv_matrix.ndim > 2:
-            sv_matrix = sv_matrix.reshape(sv_matrix.shape[0], -1)
-        sv_flat = sv_matrix[0].flatten()
-
-        impacts = [(name, float(v)) for name, v in zip(feature_names, sv_flat)]
-        impacts.sort(key=lambda x: x[1], reverse=True)
-
-        top_fraud = dict(list({name: round(val, 5) for name, val in impacts if val > 0}.items())[:5])
-        top_safe  = dict(list({name: round(abs(val), 5) for name, val in impacts if val < 0}.items())[:5])
-        
-        explanation_text = generate_nlp_explanation(top_fraud)
-        
-        explanation = {
-            "top_fraud_indicators": top_fraud,
-            "top_safe_indicators": top_safe
-        }
         
         alert = {
             "transaction_id": tx_id,
             "bank_id": BANK_ID,
             "bank_name": bank_name,
-            "risk_score": round(risk_score, 4),
+            "risk_score": 0.9420,
             "timestamp": ts,
             "status": "blocked",
             "inference_mode": "edge_local",
             "data_left_bank": False,
-            "explanation": explanation,
-            "explanation_text": explanation_text,
+            "explanation": {
+                "top_fraud_indicators": {"Device_Type_ATM": 0.354, "Transaction_Hour": 0.281, "Transaction_Amount": 0.215},
+                "top_safe_indicators": {"Account_Type_Savings": 0.042}
+            },
+            "explanation_text": "This domestic transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹25,000.00 heavily deviated from your normal domestic account behavior based on federated local edge inference (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer).",
         }
         LOCAL_ALERTS.append(alert)
         
         TRANSACTIONS_DB.insert(0, {
             "id": tx_id,
-            "entity": "Nexus International Wire",
-            "subtext": "Incoming International Transfer — Flagged for Review",
-            "channel": "Inbound Wire",
-            "channelType": "Incoming International Wire",
-            "amount": "+₹1,48,500.00",
-            "isPositive": True,
+            "entity": "Late-Night ATM Cash Withdrawal",
+            "subtext": "Suspicious Off-Hours ATM Withdrawal — Terminal #0842",
+            "channel": "Domestic ATM Debit",
+            "channelType": "Domestic ATM Cash Withdrawal",
+            "amount": "-₹25,000.00",
+            "isPositive": False,
             "status": "Flagged",
             "category": "flagged",
-            "timestamp": "Today, 09:41 AM IST",
-            "flagReason": "High anomaly score detected by Federated Edge AI Model (Receiving Bank Security Review)",
+            "timestamp": "Today, 02:41 AM",
+            "flagReason": "High anomaly score detected by Federated Edge AI Model (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)",
             "actionText": "Review Flag"
         })
-
     except Exception as e:
         print("Could not initialize mock DB with model:", e)
 
@@ -657,13 +598,18 @@ def list_users():
 
 @app.get("/transactions", tags=["Data"])
 def get_transactions(phone: Optional[str] = None):
+    """
+    Returns transactions for the requested user.
+    If a newly created user has zero transactions, returns [] without falling back to TRANSACTIONS_DB.
+    """
     if not phone:
         # Check active phone or default
         phone = "9876543210"
-    txs = database.get_transactions_by_user(phone)
-    if not txs:
-        init_mock_db()
-        return TRANSACTIONS_DB
+    clean_phone = phone.replace("-", "").replace(" ", "")
+    txs = database.get_transactions_by_user(clean_phone)
+    if not txs and clean_phone in ["9876543210", "9999999999", "9988776655"]:
+        database.seed_demo_accounts()
+        txs = database.get_transactions_by_user(clean_phone)
     return txs
 
 
