@@ -1,5 +1,8 @@
 {
-  "input_dim": 24,
+  "model_type": "FraudGNN",
+  "node_dim": 8,
+  "edge_dim": 17,
+  "input_dim": 25,
   "num_rounds": 5,
-  "dp_epsilon_total": 2.5775
+  "dp_epsilon_total": 12.8873
 }

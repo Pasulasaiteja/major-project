@@ -1,3 +1,8 @@
+torch
+torch_geometric
+torch-scatter
+torch-sparse
+networkx
 pandas
 scikit-learn
 xgboost
@@ -5,3 +10,4 @@ imbalanced-learn
 shap
 fastapi
 uvicorn
+opacus

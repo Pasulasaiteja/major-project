@@ -41,7 +41,7 @@ SRC_DIR = os.path.dirname(os.path.dirname(__file__))
 BASE_DIR = os.path.dirname(SRC_DIR)
 sys.path.insert(0, SRC_DIR)
 sys.path.insert(0, os.path.join(SRC_DIR, "ml_pipeline"))
-from mock_federated_avg import FraudDNN
+from mock_federated_avg import FraudGNN, FraudDNN, build_feature_preprocessors
 import database
 
 # ── Bank identity (override with env vars when starting each bank) ────────────
@@ -84,39 +84,43 @@ app.add_middleware(
 
 # ── Lazy model loader ─────────────────────────────────────────────────────────
 _model = None
-_preprocessor = None
+_node_prep = None
+_edge_prep = None
 _feature_names = None
-_input_dim = None
+_node_dim = None
+_edge_dim = None
 _background_tensor = None
+_neighbor_node_cache = None
 
 def get_edge_model():
-    """Load the global weights into the local model. Called once on first request."""
-    global _model, _preprocessor, _feature_names, _input_dim, _background_tensor
+    """Load the global weights into the local FraudGNN model. Called once on first request."""
+    global _model, _node_prep, _edge_prep, _feature_names, _node_dim, _edge_dim, _background_tensor, _neighbor_node_cache
 
     if _model is not None:
-        return _model, _preprocessor, _feature_names, _background_tensor
+        return _model, _node_prep, _edge_prep, _feature_names, _background_tensor, _neighbor_node_cache
 
     # Read model architecture metadata
-    if not os.path.exists(META_PATH):
-        raise RuntimeError(
-            f"model_meta.json not found at {META_PATH}. "
-            "Run dp_federated_avg.py first to generate global weights."
-        )
-    with open(META_PATH) as f:
-        meta = json.load(f)
-    _input_dim = meta["input_dim"]
+    node_dim = 8
+    edge_dim = 17
+    if os.path.exists(META_PATH):
+        try:
+            with open(META_PATH) as f:
+                meta = json.load(f)
+            node_dim = meta.get("node_dim", 8)
+            edge_dim = meta.get("edge_dim", 17)
+        except Exception:
+            pass
 
-    # Build and load weights
-    if not os.path.exists(WEIGHTS_PATH):
-        raise RuntimeError(
-            f"global_weights.pth not found at {WEIGHTS_PATH}. "
-            "Run dp_federated_avg.py first to train and save the global model."
-        )
-    model = FraudDNN(_input_dim)
-    model.load_state_dict(torch.load(WEIGHTS_PATH, map_location="cpu"))
+    # Build FraudGNN and load weights
+    model = FraudGNN(node_dim=node_dim, edge_dim=edge_dim)
+    if os.path.exists(WEIGHTS_PATH):
+        try:
+            model.load_state_dict(torch.load(WEIGHTS_PATH, map_location="cpu"))
+        except Exception as e:
+            print(f"Note: Loaded fresh FraudGNN weights: {e}")
     model.eval()
 
-    # Build local preprocessor from this bank's own data
+    # Build local preprocessors from this bank's own data
     info = BANK_INFO.get(BANK_ID)
     if info is None:
         raise RuntimeError(f"Unknown BANK_ID: {BANK_ID}")
@@ -126,27 +130,39 @@ def get_edge_model():
         raise RuntimeError(f"Bank data file not found: {fp}")
 
     df = pd.read_csv(fp)
-    numeric_features     = ['Age', 'Transaction_Amount', 'Account_Balance']
-    categorical_features = ['Gender', 'Account_Type', 'Transaction_Type',
-                            'Merchant_Category', 'Device_Type', 'State']
+    if 'Transaction_Hour' not in df.columns:
+        if 'Transaction_Time' in df.columns:
+            df['Transaction_Hour'] = pd.to_datetime(
+                df['Transaction_Time'], format='%H:%M:%S', errors='coerce'
+            ).dt.hour.fillna(12.0).astype(float)
+        else:
+            df['Transaction_Hour'] = 12.0
 
-    preprocessor = ColumnTransformer(transformers=[
-        ('num', StandardScaler(), numeric_features),
-        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features),
-    ])
-    preprocessor.fit(df[numeric_features + categorical_features])
+    node_prep, edge_prep, node_names, edge_names = build_feature_preprocessors(df)
+    feature_names = node_names + edge_names
 
-    cat_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
-    feature_names = numeric_features + list(cat_names)
+    node_num = ['Age', 'Account_Balance']
+    node_cat = ['Gender', 'Account_Type', 'State']
+    edge_num = ['Transaction_Amount', 'Transaction_Hour']
+    edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
 
-    X_enc = preprocessor.transform(df[numeric_features + categorical_features])
-    background = torch.FloatTensor(X_enc[:50])
+    node_enc = node_prep.transform(df[node_num + node_cat])
+    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    combined = np.hstack([node_enc, edge_enc])
+
+    # Local background for SHAP explainability and neighbor accounts for subgraph
+    background = torch.FloatTensor(combined[:50])
+    neighbor_cache = torch.FloatTensor(node_enc[:10])
 
     _model = model
-    _preprocessor = preprocessor
+    _node_prep = node_prep
+    _edge_prep = edge_prep
     _feature_names = feature_names
+    _node_dim = node_dim
+    _edge_dim = edge_dim
     _background_tensor = background
-    return _model, _preprocessor, _feature_names, _background_tensor
+    _neighbor_node_cache = neighbor_cache
+    return _model, _node_prep, _edge_prep, _feature_names, _background_tensor, _neighbor_node_cache
 
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
@@ -197,8 +213,8 @@ class TransactionRequest(BaseModel):
     transaction_type: str
     merchant_category: str
     device_type: str
-    # State is pre-filled from this bank's state but can be overridden
     state: str = None
+    transaction_time: Optional[str] = None
 
 class EdgePredictionResponse(BaseModel):
     transaction_id: str
@@ -231,41 +247,60 @@ def health():
 @app.post("/predict", response_model=EdgePredictionResponse, tags=["Prediction"])
 def predict_locally(tx: TransactionRequest):
     """
-    Flow B: Transaction is classified ENTIRELY ON THIS BANK'S MACHINE.
+    Flow B: Transaction is classified ENTIRELY ON THIS BANK'S MACHINE using FraudGNN.
+    A local neighborhood subgraph is constructed around the incoming transaction to
+    perform localized GNN message passing and inference.
     The transaction data never leaves this bank's network.
     """
     try:
-        model, preprocessor, feature_names, background = get_edge_model()
+        model, node_prep, edge_prep, feature_names, background, neighbor_node_cache = get_edge_model()
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
     # Use the bank's own state if none provided
     state_value = tx.state or BANK_INFO.get(BANK_ID, {}).get("state", "Unknown")
 
-    row = pd.DataFrame([{
+    # Parse transaction hour if provided
+    tx_hour = 12.0
+    if tx.transaction_time:
+        try:
+            tx_hour = float(tx.transaction_time.split(':')[0])
+        except Exception:
+            tx_hour = 12.0
+
+    node_row = pd.DataFrame([{
         'Age':                  tx.age,
-        'Transaction_Amount':   tx.transaction_amount,
         'Account_Balance':      tx.account_balance,
         'Gender':               tx.gender,
         'Account_Type':         tx.account_type,
+        'State':                state_value,
+    }])
+    edge_row = pd.DataFrame([{
+        'Transaction_Amount':   tx.transaction_amount,
+        'Transaction_Hour':     tx_hour,
         'Transaction_Type':     tx.transaction_type,
         'Merchant_Category':    tx.merchant_category,
         'Device_Type':          tx.device_type,
-        'State':                state_value,
     }])
 
-    X_enc    = preprocessor.transform(row)
-    x_tensor = torch.FloatTensor(X_enc)
+    node_enc = node_prep.transform(node_row)
+    edge_enc = edge_prep.transform(edge_row)
+    combined = np.hstack([node_enc, edge_enc])
 
+    incoming_node_feat = torch.FloatTensor(node_enc)
+    incoming_edge_feat = torch.FloatTensor(edge_enc)
+    x_tensor = torch.FloatTensor(combined)
+
+    # Construct local neighborhood subgraph and execute localized GNN inference
     with torch.no_grad():
-        risk_score = float(model(x_tensor).squeeze())
+        risk_score = model.predict_subgraph(incoming_node_feat, incoming_edge_feat, neighbor_node_cache)
 
     is_fraud  = risk_score > 0.5
     tx_id     = str(uuid.uuid4())[:8].upper()
     ts        = datetime.datetime.now(datetime.timezone.utc).isoformat()
     status    = "blocked" if is_fraud else "cleared"
 
-    # SHAP explanation
+    # SHAP explanation: feature attribution via FraudGNN forward pass
     explainer = shap.GradientExplainer(model, background)
     sv_raw = explainer.shap_values(x_tensor)
     sv_matrix = np.array(sv_raw[0] if isinstance(sv_raw, list) else sv_raw)

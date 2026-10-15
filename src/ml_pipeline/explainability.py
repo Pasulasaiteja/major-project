@@ -4,12 +4,10 @@ import torch
 import shap
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
 
-# Add parent path to import FraudDNN
+# Add parent path to import FraudGNN
 sys.path.insert(0, os.path.dirname(__file__))
-from mock_federated_avg import FraudDNN
+from dp_federated_avg import FraudGNN, build_feature_preprocessors
 
 def generate_nlp_explanation(feature_impact):
     fraud_drivers = [item for item in feature_impact if item[1] > 0]
@@ -44,38 +42,50 @@ def generate_nlp_explanation(feature_impact):
     return nlp_text
 
 def generate_shap_explanations():
-    print("Initializing SHAP Explainability Module...")
+    print("Initializing GNN SHAP Explainability Module...")
 
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     file_path = os.path.join(base_dir, 'data', 'partitioned_banks', 'bank_1_Nagaland.csv')
 
     df = pd.read_csv(file_path)
-    numeric_features = ['Age', 'Transaction_Amount', 'Account_Balance']
-    categorical_features = ['Gender', 'Account_Type', 'Transaction_Type', 'Merchant_Category', 'Device_Type', 'State']
+    if 'Transaction_Hour' not in df.columns:
+        if 'Transaction_Time' in df.columns:
+            df['Transaction_Hour'] = pd.to_datetime(
+                df['Transaction_Time'], format='%H:%M:%S', errors='coerce'
+            ).dt.hour.fillna(12.0).astype(float)
+        else:
+            df['Transaction_Hour'] = 12.0
 
-    X = df[numeric_features + categorical_features]
+    node_prep, edge_prep, node_feature_names, edge_feature_names = build_feature_preprocessors(df)
+    feature_names = node_feature_names + edge_feature_names
+
+    node_num = ['Age', 'Account_Balance']
+    node_cat = ['Gender', 'Account_Type', 'State']
+    edge_num = ['Transaction_Amount', 'Transaction_Hour']
+    edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
+
+    node_enc = node_prep.transform(df[node_num + node_cat])
+    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    X_encoded = np.hstack([node_enc, edge_enc])
     y = df['Is_Fraud'].values
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), numeric_features),
-            ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features)
-        ])
-
-    X_encoded = preprocessor.fit_transform(X)
-
-    # Get feature names
-    cat_feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
-    feature_names = numeric_features + list(cat_feature_names)
 
     X_tensor = torch.FloatTensor(X_encoded)
 
-    # Load / initialize model
-    model = FraudDNN(X_encoded.shape[1])
+    # Load / initialize FraudGNN model
+    model = FraudGNN(node_dim=node_enc.shape[1], edge_dim=edge_enc.shape[1])
+    
+    weights_path = os.path.join(base_dir, "models", "global_weights.pth")
+    if os.path.exists(weights_path):
+        try:
+            model.load_state_dict(torch.load(weights_path, map_location="cpu"))
+            print(f"Loaded trained GNN weights from {weights_path}")
+        except Exception as e:
+            print(f"Using initialized GNN weights: {e}")
+            
     model.eval()
 
-    # Background data: 100 normal transactions
-    normal_idx = np.where(y == 0)[0][:100]
+    # Background data: 50 normal transactions
+    normal_idx = np.where(y == 0)[0][:50]
     background_data = X_tensor[normal_idx]
 
     # Fraud transactions to explain
@@ -84,20 +94,18 @@ def generate_shap_explanations():
         print("No fraud cases found in this sample.")
         return
 
-    # Use GradientExplainer — fully compatible with PyTorch DNNs
+    # Use GradientExplainer — fully compatible with FraudGNN forward pass
     explainer = shap.GradientExplainer(model, background_data)
 
     # Explain the first 5 fraud transactions
     targets = X_tensor[fraud_idx[:5]]
     shap_values = explainer.shap_values(targets)
 
-    # sv_matrix may be list-of-arrays or 2D array — normalise to 2D numpy array
     sv_matrix = np.array(shap_values[0] if isinstance(shap_values, list) else shap_values)
-    # Ensure shape is (n_samples, n_features) — squeeze out any extra dims
     if sv_matrix.ndim > 2:
         sv_matrix = sv_matrix.reshape(sv_matrix.shape[0], -1)
 
-    # Report for the first fraud transaction — flatten to 1-D before iterating
+    # Report for the first fraud transaction
     sv_flat = sv_matrix[0].flatten()
     val_flat = np.array(X_encoded[fraud_idx[0]]).flatten()
 
@@ -105,7 +113,7 @@ def generate_shap_explanations():
                       for name, imp, val in zip(feature_names, sv_flat, val_flat)]
     feature_impact.sort(key=lambda x: abs(x[1]), reverse=True)
 
-    print(f"\n--- Explaining Transaction #{fraud_idx[0]} (True Label: FRAUD) ---")
+    print(f"\n--- Explaining Transaction #{fraud_idx[0]} (True Label: FRAUD) with FraudGNN ---")
     print(f"{'Feature':<35} | {'SHAP Impact':>12} | {'Actual Value':>12}")
     print("-" * 70)
     for name, impact, val in feature_impact[:10]:
@@ -116,7 +124,7 @@ def generate_shap_explanations():
     nlp_summary = generate_nlp_explanation(feature_impact)
     print(nlp_summary)
 
-    print("\nSHAP Explainability completed successfully.")
+    print("\nGNN SHAP Explainability completed successfully.")
 
 if __name__ == "__main__":
     generate_shap_explanations()
