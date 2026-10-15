@@ -202,8 +202,11 @@ window.DashboardPage = {
 
     async function loadData() {
       try {
-        const txs = await API.getTransactions();
-        const alerts = await API.getAlerts();
+        const activeUser = API.getAuth().user;
+        const storedPhone = localStorage.getItem('fs_active_phone');
+        const activePhone = (activeUser ? (activeUser.phone || activeUser.account_number) : '') || storedPhone || '';
+        const txs = await API.getTransactions(activePhone);
+        const alerts = await API.getAlerts(null, null, activePhone);
         
         document.getElementById('scanCount').textContent = `${txs.length} Scans Today`;
 

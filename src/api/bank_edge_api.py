@@ -603,8 +603,7 @@ def get_transactions(phone: Optional[str] = None):
     If a newly created user has zero transactions, returns [] without falling back to TRANSACTIONS_DB.
     """
     if not phone:
-        # Check active phone or default
-        phone = "9876543210"
+        return []
     clean_phone = phone.replace("-", "").replace(" ", "")
     txs = database.get_transactions_by_user(clean_phone)
     if not txs and clean_phone in ["9876543210", "9999999999", "9988776655"]:

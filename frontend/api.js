@@ -101,8 +101,10 @@ const API = (() => {
   // ── Transactions ──
   async function getTransactions(phone) {
     const activeUser = getAuth().user;
-    const userPhone = phone || (activeUser ? (activeUser.phone || activeUser.account_number) : '');
-    const query = userPhone ? `?phone=${userPhone}` : '';
+    const storedPhone = localStorage.getItem('fs_active_phone');
+    const userPhone = phone || (activeUser ? (activeUser.phone || activeUser.account_number) : '') || storedPhone || '';
+    const cleanPhone = String(userPhone).replace(/[^0-9]/g, '');
+    const query = cleanPhone ? `?phone=${cleanPhone}` : '';
     return request(EDGE_URL, `/transactions${query}`);
   }
 
@@ -115,11 +117,16 @@ const API = (() => {
   }
 
   // ── Alerts ──
-  async function getAlerts(bankId, status) {
+  async function getAlerts(bankId, status, phone) {
     let query = '';
     const params = [];
     if (bankId) params.push(`bank_id=${bankId}`);
     if (status) params.push(`status=${status}`);
+    const activeUser = getAuth().user;
+    const storedPhone = localStorage.getItem('fs_active_phone');
+    const userPhone = phone || (activeUser ? (activeUser.phone || activeUser.account_number) : '') || storedPhone || '';
+    const cleanPhone = String(userPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone) params.push(`phone=${cleanPhone}`);
     if (params.length) query = '?' + params.join('&');
     return request(EDGE_URL, `/alerts${query}`);
   }
