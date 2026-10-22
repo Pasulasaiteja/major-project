@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="100%" height="100%" style="background-color: #fcf8ff; font-family: 'Comfortaa', 'Metrophobic', sans-serif;">
+  <defs>
+    <!-- Gradients & Shadows -->
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5844d9" />
+      <stop offset="100%" stop-color="#6d5bef" />
+    </linearGradient>
+    <linearGradient id="surfaceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f6f1fe" />
+    </linearGradient>
+    <linearGradient id="errorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ba1a1a" />
+      <stop offset="100%" stop-color="#ff5449" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#2d2a3a" flood-opacity="0.08"/>
+    </filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#787586"/>
+    </marker>
+    <marker id="arrowPrimary" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#543fd5"/>
+    </marker>
+    <marker id="arrowError" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ba1a1a"/>
+    </marker>
+  </defs>
+
+  <!-- ================= BACKGROUND & TITLE ================= -->
+  <rect width="1200" height="1600" fill="#fcf8ff"/>
+  
+  <!-- Header Banner -->
+  <rect x="60" y="40" width="1080" height="90" rx="20" fill="url(#primaryGrad)" filter="url(#shadow)"/>
+  <text x="90" y="80" fill="#ffffff" font-size="28" font-weight="bold" font-family="'Climate Crisis', sans-serif" letter-spacing="1">FEDERATED SENTINEL — SYSTEM ARCHITECTURE</text>
+  <text x="90" y="110" fill="#e4dfff" font-size="14" font-family="'Metrophobic', sans-serif">Privacy-Preserving Federated Learning &amp; Real-Time Edge Fraud Detection Pipeline</text>
+
+  <!-- ================= DIAGRAM 1: FEDERATED LEARNING PIPELINE (FLOW A) ================= -->
+  <g transform="translate(60, 160)">
+    <!-- Section Box -->
+    <rect width="1080" height="380" rx="16" fill="url(#surfaceGrad)" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+    
+    <!-- Section Title -->
+    <rect x="30" y="25" width="360" height="36" rx="8" fill="#e6deff"/>
+    <text x="45" y="48" fill="#170065" font-size="14" font-weight="bold" letter-spacing="0.5">1. FEDERATED TRAINING PIPELINE (FLOW A)</text>
+
+    <!-- Central Server Box -->
+    <rect x="420" y="80" width="240" height="100" rx="14" fill="#ffffff" stroke="#543fd5" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="450" cy="130" r="18" fill="#e4dfff"/>
+    <text x="450" y="136" text-anchor="middle" fill="#543fd5" font-size="16" font-weight="bold">⚖️</text>
+    <text x="485" y="118" fill="#1c1b23" font-size="15" font-weight="bold">Central Aggregator</text>
+    <text x="485" y="138" fill="#474555" font-size="12">FedAvg + DP-SGD</text>
+    <text x="485" y="156" fill="#543fd5" font-size="11" font-weight="bold">global_weights.pth</text>
+
+    <!-- Bank Node 1 -->
+    <g transform="translate(80, 240)">
+      <rect width="260" height="100" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="20" y="30" fill="#1c1b23" font-size="14" font-weight="bold">Nagaland Regional Bank</text>
+      <text x="20" y="50" fill="#474555" font-size="12">📁 Local CSV Data (Private)</text>
+      <rect x="20" y="65" width="100" height="22" rx="6" fill="#f0ecf9"/>
+      <text x="30" y="80" fill="#543fd5" font-size="11" font-weight="bold">Local Training</text>
+    </g>
+
+    <!-- Bank Node 2 -->
+    <g transform="translate(410, 240)">
+      <rect width="260" height="100" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="20" y="30" fill="#1c1b23" font-size="14" font-weight="bold">Meghalaya Regional Bank</text>
+      <text x="20" y="50" fill="#474555" font-size="12">📁 Local CSV Data (Private)</text>
+      <rect x="20" y="65" width="100" height="22" rx="6" fill="#f0ecf9"/>
+      <text x="30" y="80" fill="#543fd5" font-size="11" font-weight="bold">Local Training</text>
+    </g>
+
+    <!-- Bank Node 3 -->
+    <g transform="translate(740, 240)">
+      <rect width="260" height="100" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="20" y="30" fill="#1c1b23" font-size="14" font-weight="bold">Uttar Pradesh Gramin Bank</text>
+      <text x="20" y="50" fill="#474555" font-size="12">📁 Local CSV Data (Private)</text>
+      <rect x="20" y="65" width="100" height="22" rx="6" fill="#f0ecf9"/>
+      <text x="30" y="80" fill="#543fd5" font-size="11" font-weight="bold">Local Training</text>
+    </g>
+
+    <!-- Connectors Flow A -->
+    <!-- Bank 1 to Central -->
+    <path d="M 210 240 L 210 200 L 480 200 L 480 180" fill="none" stroke="#543fd5" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowPrimary)"/>
+    <path d="M 540 180 L 540 200 L 290 200 L 290 240" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Bank 2 to Central -->
+    <path d="M 540 240 L 540 180" fill="none" stroke="#543fd5" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowPrimary)"/>
+    <path d="M 570 180 L 570 240" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Bank 3 to Central -->
+    <path d="M 870 240 L 870 200 L 600 200 L 600 180" fill="none" stroke="#543fd5" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowPrimary)"/>
+    <path d="M 620 180 L 620 200 L 790 200 L 790 240" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Legend Flow A -->
+    <rect x="410" y="348" width="260" height="20" rx="4" fill="none"/>
+    <circle cx="420" cy="358" r="5" fill="#543fd5"/>
+    <text x="435" y="362" fill="#474555" font-size="11">Encrypted Weight Updates</text>
+    <circle cx="580" cy="358" r="5" fill="#059669"/>
+    <text x="595" y="362" fill="#474555" font-size="11">Global Weights Broadcast</text>
+  </g>
+
+  <!-- ================= DIAGRAM 2: DATA FLOW & EDGE INFERENCE (FLOW B) ================= -->
+  <g transform="translate(60, 570)">
+    <!-- Section Box -->
+    <rect width="1080" height="360" rx="16" fill="url(#surfaceGrad)" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+    
+    <!-- Section Title -->
+    <rect x="30" y="25" width="380" height="36" rx="8" fill="#e6deff"/>
+    <text x="45" y="48" fill="#170065" font-size="14" font-weight="bold" letter-spacing="0.5">2. DECENTRALIZED DATA FLOW &amp; EDGE INFERENCE (FLOW B)</text>
+
+    <!-- Client / Transaction Submission -->
+    <rect x="60" y="150" width="220" height="110" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="85" y="185" fill="#1c1b23" font-size="14" font-weight="bold">💳 Customer Transaction</text>
+    <text x="85" y="210" fill="#474555" font-size="12">Amount, Location,</text>
+    <text x="85" y="228" fill="#474555" font-size="12">Account Balance, etc.</text>
+
+    <!-- Arrow to Bank Edge API -->
+    <path d="M 280 205 L 370 205" fill="none" stroke="#543fd5" stroke-width="3" marker-end="url(#arrowPrimary)"/>
+    <rect x="295" y="185" width="60" height="20" rx="4" fill="#f0ecf9"/>
+    <text x="325" y="199" text-anchor="middle" fill="#543fd5" font-size="10" font-weight="bold">POST</text>
+
+    <!-- Bank Edge API Node (On-Premise) -->
+    <rect x="375" y="110" width="330" height="190" rx="16" fill="#ffffff" stroke="#543fd5" stroke-width="2.5" filter="url(#shadow)"/>
+    <rect x="375" y="110" width="330" height="40" rx="16" fill="#f0ecf9"/>
+    <text x="395" y="136" fill="#170065" font-size="14" font-weight="bold">🏦 Bank Local Edge Node (bank_edge_api.py)</text>
+    
+    <rect x="400" y="165" width="280" height="50" rx="8" fill="#fcf8ff" stroke="#c8c4d7" stroke-width="1"/>
+    <text x="415" y="185" fill="#1c1b23" font-size="12" font-weight="bold">Local Preprocessing &amp; Model Evaluation</text>
+    <text x="415" y="202" fill="#474555" font-size="11">Loaded with global_weights.pth securely on-premise</text>
+
+    <rect x="400" y="225" width="280" height="55" rx="8" fill="#e6deff" stroke="#cabeff" stroke-width="1"/>
+    <text x="415" y="245" fill="#170065" font-size="12" font-weight="bold">🔒 Privacy Guarantee</text>
+    <text x="415" y="262" fill="#483e7b" font-size="11">Data NEVER leaves the bank network (Data Left Bank: False)</text>
+
+    <!-- Arrow to Output / Decision -->
+    <path d="M 705 205 L 795 205" fill="none" stroke="#543fd5" stroke-width="3" marker-end="url(#arrowPrimary)"/>
+
+    <!-- Prediction Decision Box -->
+    <g transform="translate(800, 140)">
+      <rect width="230" height="130" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="25" y="30" fill="#1c1b23" font-size="14" font-weight="bold">⚡ Real-Time Inference</text>
+      
+      <rect x="20" y="45" width="190" height="30" rx="6" fill="#d1fae5"/>
+      <text x="30" y="65" fill="#065f46" font-size="12" font-weight="bold">🟢 Risk Score &lt; 0.5 (Safe)</text>
+
+      <rect x="20" y="82" width="190" height="30" rx="6" fill="#fee2e2"/>
+      <text x="30" y="102" fill="#991b1b" font-size="12" font-weight="bold">🔴 Risk Score &gt; 0.5 (Flagged)</text>
+    </g>
+  </g>
+
+  <!-- ================= DIAGRAM 3: PREDICTION, SHAP & FRONTEND LIFECYCLE ================= -->
+  <g transform="translate(60, 955)">
+    <!-- Section Box -->
+    <rect width="1080" height="585" rx="16" fill="url(#surfaceGrad)" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+    
+    <!-- Section Title -->
+    <rect x="30" y="25" width="460" height="36" rx="8" fill="#e6deff"/>
+    <text x="45" y="48" fill="#170065" font-size="14" font-weight="bold" letter-spacing="0.5">3. PREDICTION FLAGGING, SHAP EXPLAINABILITY &amp; FRONTEND DISPLAY</text>
+
+    <!-- Step 1: Deep Learning & SHAP -->
+    <g transform="translate(50, 90)">
+      <rect width="280" height="180" rx="14" fill="#ffffff" stroke="#543fd5" stroke-width="1.5" filter="url(#shadow)"/>
+      <rect x="0" y="0" width="280" height="35" rx="14" fill="#543fd5"/>
+      <text x="20" y="23" fill="#ffffff" font-size="13" font-weight="bold">1. PyTorch DNN + SHAP Explainer</text>
+      
+      <text x="20" y="65" fill="#1c1b23" font-size="12" font-weight="bold">Risk Score Calculation:</text>
+      <text x="20" y="85" fill="#474555" font-size="11">• Evaluates neural network output</text>
+      <text x="20" y="103" fill="#474555" font-size="11">• If score &gt; 0.5 → Status: "blocked"</text>
+      
+      <text x="20" y="130" fill="#1c1b23" font-size="12" font-weight="bold">GradientExplainer:</text>
+      <text x="20" y="150" fill="#474555" font-size="11">• Computes feature attribution values</text>
+      <text x="20" y="166" fill="#474555" font-size="11">• Generates plain English explanation</text>
+    </g>
+
+    <!-- Arrow 1 -> 2 -->
+    <path d="M 335 180 L 390 180" fill="none" stroke="#543fd5" stroke-width="3" marker-end="url(#arrowPrimary)"/>
+
+    <!-- Step 2: Backend API Alert Storage -->
+    <g transform="translate(395, 90)">
+      <rect width="280" height="180" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <rect x="0" y="0" width="280" height="35" rx="14" fill="#6d5bef"/>
+      <text x="20" y="23" fill="#ffffff" font-size="13" font-weight="bold">2. Alert Database &amp; Queue</text>
+      
+      <text x="20" y="65" fill="#1c1b23" font-size="12" font-weight="bold">Alert Object Created:</text>
+      <text x="20" y="85" fill="#474555" font-size="11">• transaction_id, risk_score</text>
+      <text x="20" y="103" fill="#474555" font-size="11">• status: "blocked" / "pending_review"</text>
+      
+      <text x="20" y="130" fill="#1c1b23" font-size="12" font-weight="bold">Storage &amp; Propagation:</text>
+      <text x="20" y="150" fill="#474555" font-size="11">• Added to LOCAL_ALERTS and TRANSACTIONS_DB</text>
+      <text x="20" y="166" fill="#474555" font-size="11">• Fed to admin escalation queue</text>
+    </g>
+
+    <!-- Arrow 2 -> 3 -->
+    <path d="M 675 180 L 730 180" fill="none" stroke="#543fd5" stroke-width="3" marker-end="url(#arrowPrimary)"/>
+
+    <!-- Step 3: Frontend Client Portal & Dashboard -->
+    <g transform="translate(735, 90)">
+      <rect width="300" height="180" rx="14" fill="#ffffff" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+      <rect x="0" y="0" width="300" height="35" rx="14" fill="#059669"/>
+      <text x="20" y="23" fill="#ffffff" font-size="13" font-weight="bold">3. Frontend SPA Dashboard Render</text>
+      
+      <text x="20" y="65" fill="#1c1b23" font-size="12" font-weight="bold">Visual Indicators:</text>
+      <text x="20" y="85" fill="#474555" font-size="11">• Red warning banner &amp; notification badge</text>
+      <text x="20" y="103" fill="#474555" font-size="11">• Transaction item marked "Hold Applied"</text>
+      
+      <text x="20" y="130" fill="#1c1b23" font-size="12" font-weight="bold">Interactive Actions:</text>
+      <text x="20" y="150" fill="#474555" font-size="11">• Click "Review" → Navigates to Hold-Reason page</text>
+      <text x="20" y="166" fill="#474555" font-size="11">• Authorize or report fraud instantly</text>
+    </g>
+
+    <!-- Sub-Flow: Frontend UI Mockup Representation -->
+    <g transform="translate(50, 300)">
+      <rect width="985" height="245" rx="14" fill="#ffffff" stroke="#c8c4d7" stroke-width="1" filter="url(#shadow)"/>
+      <rect x="20" y="20" width="945" height="30" rx="6" fill="#f0ecf9"/>
+      <text x="35" y="40" fill="#170065" font-size="12" font-weight="bold">🖥️ Client UI Screen Layout: Dashboard &amp; Hold Review Flow</text>
+
+      <!-- Dashboard Mock Card -->
+      <rect x="35" y="70" width="450" height="150" rx="10" fill="#fcf8ff" stroke="#cabeff" stroke-width="1"/>
+      <text x="55" y="95" fill="#1c1b23" font-size="13" font-weight="bold">Client Dashboard (/dashboard)</text>
+      <rect x="55" y="110" width="410" height="35" rx="6" fill="#fee2e2" stroke="#fca5a5" stroke-width="1"/>
+      <text x="70" y="132" fill="#991b1b" font-size="11" font-weight="bold">⚠️ Protective Hold Applied on Nexus Wire Transfer ($14,850.00)</text>
+      <rect x="55" y="155" width="410" height="50" rx="6" fill="#ffffff" stroke="#c8c4d7" stroke-width="1"/>
+      <text x="70" y="175" fill="#1c1b23" font-size="11" font-weight="bold">CryptoExchange Ltd • Today, 09:41 AM</text>
+      <rect x="375" y="170" width="75" height="22" rx="4" fill="#543fd5"/>
+      <text x="390" y="185" fill="#ffffff" font-size="10" font-weight="bold">Review ➔</text>
+
+      <!-- Hold Reason Mock Card -->
+      <path d="M 495 145 L 535 145" fill="none" stroke="#543fd5" stroke-width="2" marker-end="url(#arrowPrimary)"/>
+
+      <rect x="540" y="70" width="440" height="150" rx="10" fill="#fcf8ff" stroke="#cabeff" stroke-width="1"/>
+      <text x="560" y="95" fill="#1c1b23" font-size="13" font-weight="bold">Hold Reason &amp; Explainability (/hold-reason)</text>
+      <text x="560" y="120" fill="#474555" font-size="11">🧠 AI Reason: "Flagged due to unusually high transaction</text>
+      <text x="560" y="136" fill="#474555" font-size="11">amount combined with anomalous device/location."</text>
+      
+      <rect x="560" y="155" width="200" height="45" rx="8" fill="#10b981"/>
+      <text x="580" y="182" fill="#ffffff" font-size="11" font-weight="bold">✓ I Did This (Authorize)</text>
+
+      <rect x="770" y="155" width="195" height="45" rx="8" fill="#ba1a1a"/>
+      <text x="790" y="182" fill="#ffffff" font-size="11" font-weight="bold">✗ Not My Transaction</text>
+    </g>
+  </g>
+</svg>

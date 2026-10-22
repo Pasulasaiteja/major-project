@@ -215,6 +215,7 @@ class TransactionRequest(BaseModel):
     device_type: str
     state: str = None
     transaction_time: Optional[str] = None
+    phone: Optional[str] = None
 
 class EdgePredictionResponse(BaseModel):
     transaction_id: str
@@ -360,7 +361,7 @@ def predict_locally(tx: TransactionRequest):
             # Also store in SQLite for active user
             database.create_alert({
                 "transaction_id": tx_id,
-                "user_phone": "9876543210",
+                "user_phone": getattr(tx, "phone", None) or "9876543210",
                 "bank_id": BANK_ID,
                 "bank_name": bank_name,
                 "risk_score": round(risk_score, 4),
@@ -370,7 +371,7 @@ def predict_locally(tx: TransactionRequest):
             })
             database.add_transaction({
                 "id": tx_id,
-                "user_phone": "9876543210",
+                "user_phone": getattr(tx, "phone", None) or "9876543210",
                 "entity": f"{tx.merchant_category} Merchant" if tx.merchant_category else "Simulated Fraud Transfer",
                 "subtext": f"{tx.transaction_type} #{tx_id}",
                 "channel": tx.transaction_type,
@@ -406,10 +407,7 @@ def get_local_alerts(phone: Optional[str] = None, status: Optional[str] = None):
     if phone:
         clean_phone = phone.replace("-", "").replace(" ", "")
         return database.get_alerts_by_user(phone=clean_phone, status=status)
-    db_alerts = database.get_alerts_by_user(phone=None, status=status)
-    if db_alerts:
-        return db_alerts
-    # Fallback to in-memory if db has no entries yet and no phone was specified
+    # When no phone is specified, do NOT leak other accounts' alerts; return in-memory alerts
     return [a for a in LOCAL_ALERTS if (not status or a.get("status") == status)]
 
 

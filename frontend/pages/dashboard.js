@@ -272,16 +272,22 @@ window.DashboardPage = {
           });
         }
 
-        // Show alert banner if there are active (blocked) alerts or flagged transactions
-        const activeAlerts = alerts.filter(a => a.status === 'blocked');
+        // Show alert banner ONLY if there are flagged transactions belonging to this user!
+        // If there are no transactions, there can never be an active threat or hold.
+        const txIds = new Set(txs.map(t => String(t.id)));
         const flaggedTxs = txs.filter(t => t.status === 'Flagged' || t.category === 'flagged');
+        const activeAlerts = (txs.length > 0)
+          ? alerts.filter(a => a.status === 'blocked' && (txIds.has(String(a.transaction_id)) || (activePhone && a.user_phone === activePhone)))
+          : [];
 
-        if (activeAlerts.length > 0 || flaggedTxs.length > 0) {
+        const hasActiveThreat = txs.length > 0 && (flaggedTxs.length > 0 || activeAlerts.length > 0);
+
+        const sentinelCard = document.getElementById('sentinelStatusCard');
+        if (hasActiveThreat) {
           activeAlertId = activeAlerts.length > 0 ? activeAlerts[0].transaction_id : flaggedTxs[0].id;
           alertBanner.classList.remove('hidden');
           notifBadge.style.display = 'block';
           
-          const sentinelCard = document.getElementById('sentinelStatusCard');
           if (sentinelCard) {
             sentinelCard.classList.remove('bg-surface-container');
             sentinelCard.classList.add('bg-error-container', 'border-error/30');
@@ -299,6 +305,24 @@ window.DashboardPage = {
         } else {
           alertBanner.classList.add('hidden');
           notifBadge.style.display = 'none';
+          
+          if (sentinelCard) {
+            sentinelCard.classList.add('bg-surface-container');
+            sentinelCard.classList.remove('bg-error-container', 'border-error/30');
+            const h3 = sentinelCard.querySelector('h3');
+            if (h3) {
+              h3.classList.remove('text-error');
+              h3.textContent = 'Sentinel Active';
+            }
+            const iconEl = sentinelCard.querySelector('.material-symbols-outlined');
+            if (iconEl) {
+              iconEl.textContent = 'shield_locked';
+              iconEl.classList.remove('text-error');
+              if (!iconEl.classList.contains('text-on-secondary-fixed')) {
+                iconEl.classList.add('text-on-secondary-fixed');
+              }
+            }
+          }
         }
 
         // Attach listeners to resolve buttons
@@ -373,7 +397,9 @@ window.DashboardPage = {
     if (simFraudBtn) {
       simFraudBtn.addEventListener('click', async () => {
         try {
+          const activePhone = localStorage.getItem('fs_active_phone') || (API.getAuth().user ? API.getAuth().user.phone : null);
           const tx = {
+            phone: activePhone,
             age: 22,
             transaction_amount: 150000.0,
             account_balance: 50.0,

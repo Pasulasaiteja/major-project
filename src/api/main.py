@@ -41,7 +41,7 @@ app.add_middleware(
 # ─────────────────────────────────────────
 # Global State (in-memory for now)
 # ─────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(SRC_DIR))
+BASE_DIR = os.path.dirname(SRC_DIR)
 PARTITIONED_DIR = os.path.join(BASE_DIR, "data", "partitioned_banks")
 
 ALERTS_DB: List[dict] = []
@@ -236,7 +236,7 @@ def predict_transaction(tx: TransactionRequest):
     top_safe  = dict(list(top_safe.items())[:5])
 
     tx_id = str(uuid.uuid4())[:8].upper()
-    ts = datetime.datetime.utcnow().isoformat() + "Z"
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     alert = {
         "transaction_id": tx_id,

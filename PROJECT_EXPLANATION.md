@@ -50,3 +50,15 @@ Black-box deep learning models are notoriously difficult to trust in banking. Fe
 1. **Client Dashboard**: View live account balance, active protection status, and real-time transaction scans.
 2. **Instant Threat Hold & Review**: Inspect flagged fraudulent transactions with detailed SHAP risk indicators and authorize or report them instantly.
 3. **Fraud Specialist Portal**: Monitor global model accuracy, training rounds, differential privacy budgets ($\epsilon$), and connected edge node statuses.
+
+---
+
+## 6. Visual Architecture & Pipeline Diagrams
+
+The comprehensive architectural diagrams illustrating the **Federated Learning Training Pipeline (Flow A)**, **Decentralized Data Flow (Flow B)**, and the **Prediction Flagging & Frontend Resolution Lifecycle** have been generated and saved to `architecture_diagrams.svg`. 
+
+You can view `architecture_diagrams.svg` directly in any SVG viewer or browser. Here is a summary of the three integrated flows shown in the diagram:
+
+1. **Federated Training Pipeline (Flow A)**: Shows regional bank nodes training models locally on private data and sending only encrypted weight updates to the Central Aggregator (FedAvg + DP-SGD), which broadcasts the updated global weights (`global_weights.pth`).
+2. **Decentralized Data Flow (Flow B)**: Illustrates how customer transactions are submitted directly to the local Bank Edge API (`bank_edge_api.py`) where inference runs on-premise without raw data ever leaving the bank.
+3. **Prediction, SHAP & Frontend Lifecycle**: Demonstrates the step-by-step pipeline from PyTorch risk scoring and SHAP explainability generation, to alert database storage (`blocked` status), and rendering in the client SPA dashboard (`/dashboard` and `/hold-reason` pages).
