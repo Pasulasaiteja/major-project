@@ -27,13 +27,16 @@ class FraudGNN(nn.Module):
     Edges represent Transactions (amounts, times, types, categories, devices).
     Outputs fraud risk probabilities between 0.0 and 1.0 via a Sigmoid classification head.
     """
-    def __init__(self, node_dim=8, edge_dim=17, hidden_dim=32):
+    def __init__(self, node_dim=8, edge_dim=None, hidden_dim=32):
         super(FraudGNN, self).__init__()
         # Allow flexible initialization (single dimension or partitioned dims)
         if edge_dim is None:
-            total = node_dim
-            self.node_dim = 8 if total >= 8 else max(1, total // 2)
-            self.edge_dim = total - self.node_dim
+            if node_dim == 25 or node_dim == 8:
+                self.node_dim = 8
+                self.edge_dim = 17
+            else:
+                self.node_dim = 8 if node_dim >= 8 else max(1, node_dim // 2)
+                self.edge_dim = node_dim - self.node_dim
         else:
             self.node_dim = node_dim
             self.edge_dim = edge_dim

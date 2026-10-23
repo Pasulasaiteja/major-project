@@ -41,7 +41,7 @@ SRC_DIR = os.path.dirname(os.path.dirname(__file__))
 BASE_DIR = os.path.dirname(SRC_DIR)
 sys.path.insert(0, SRC_DIR)
 sys.path.insert(0, os.path.join(SRC_DIR, "ml_pipeline"))
-from mock_federated_avg import FraudGNN, FraudDNN, build_feature_preprocessors
+from ml_pipeline.mock_federated_avg import FraudGNN, build_feature_preprocessors
 import database
 
 # ── Bank identity (override with env vars when starting each bank) ────────────
@@ -604,7 +604,7 @@ def get_transactions(phone: Optional[str] = None):
         return []
     clean_phone = phone.replace("-", "").replace(" ", "")
     txs = database.get_transactions_by_user(clean_phone)
-    if not txs and clean_phone in ["9876543210", "9999999999", "9988776655"]:
+    if not txs and clean_phone in ["9876543210", "9999999999", "9988776655", "9874561230"]:
         database.seed_demo_accounts()
         txs = database.get_transactions_by_user(clean_phone)
     return txs

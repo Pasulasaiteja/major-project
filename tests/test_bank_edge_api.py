@@ -2,11 +2,12 @@ from fastapi.testclient import TestClient
 import sys
 import os
 
-# Ensure the app can import its modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), 'src'))
 os.environ["BANK_ID"] = "bank_1"
 
-from api.bank_edge_api import app
+from src.api.bank_edge_api import app
 
 client = TestClient(app)
 

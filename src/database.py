@@ -178,14 +178,15 @@ def get_user_by_phone(phone: str) -> Optional[Dict]:
 # ─────────────────────────────────────────
 
 def seed_demo_accounts():
-    """Seeds dedicated demo user accounts (e.g., 9999999999, 9876543210, and 9988776655) with realistic domestic transaction data."""
+    """Seeds dedicated demo user accounts with realistic transaction data."""
     conn = get_connection()
     cursor = conn.cursor()
     
     demo_users = [
         ("9999999999", "Demo Account", "1234"),
         ("9876543210", "Saiteja Pasula (Demo)", "1234"),
-        ("9988776655", "Rajesh Sharma", "4321")
+        ("9988776655", "Rajesh Sharma", "4321"),
+        ("9874561230", "User 1230", "4444")
     ]
     
     for phone, name, pin in demo_users:
@@ -205,11 +206,11 @@ def seed_demo_accounts():
 
 def seed_user_transactions(phone: str, name: str, conn=None):
     """
-    Creates realistic domestic transaction data for demo accounts:
-    1. Normal Salary/Income Deposit (local employer NEFT deposit, +₹45,000.00).
-    2. Normal Retail Purchase (local supermarket UPI/POS payment, -₹1,250.00).
-    3. Domestic Flagged Transaction (suspicious late-night ATM cash withdrawal, -₹25,000.00,
-       flagged by the Federated Edge AI Model as a domestic anomaly pattern such as an ATM skimmer).
+    Creates realistic transaction data for demo accounts based on Bank_Transaction_Fraud_Detection.csv.
+    For User 1230 (9874561230):
+    - Multi-state transactions adapted to Nagaland Regional Bank.
+    - Exactly two fraud transactions (Mizoram ATM withdrawal and Himachal Pradesh POS charge).
+    - Four legitimate transactions (Nagaland salary, Nagaland utility bill, Assam mart, Meghalaya apparel).
     """
     close_conn = False
     if conn is None:
@@ -224,50 +225,156 @@ def seed_user_transactions(phone: str, name: str, conn=None):
             conn.close()
         return
 
-    sample_txs = [
-        {
-            "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
-            "user_phone": phone,
-            "entity": "TechCorp India Payroll",
-            "subtext": "Employer NEFT Salary Deposit",
-            "channel": "NEFT Transfer",
-            "channel_type": "Direct Bank Credit",
-            "amount": 45000.0,
-            "is_positive": 1,
-            "status": "Completed",
-            "category": "income",
-            "flag_reason": None,
-            "timestamp": "Yesterday, 10:00 AM"
-        },
-        {
-            "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
-            "user_phone": phone,
-            "entity": "Local Supermarket Store",
-            "subtext": "Supermarket UPI / POS Payment",
-            "channel": "UPI / POS Debit",
-            "channel_type": "Retail POS Terminal",
-            "amount": 1250.0,
-            "is_positive": 0,
-            "status": "Completed",
-            "category": "shopping",
-            "flag_reason": None,
-            "timestamp": "Today, 08:15 AM"
-        },
-        {
-            "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
-            "user_phone": phone,
-            "entity": "Late-Night ATM Cash Withdrawal",
-            "subtext": "Suspicious Off-Hours ATM Withdrawal — Terminal #0842",
-            "channel": "Domestic ATM Debit",
-            "channel_type": "Domestic ATM Cash Withdrawal",
-            "amount": 25000.0,
-            "is_positive": 0,
-            "status": "Flagged",
-            "category": "flagged",
-            "flag_reason": "High anomaly score detected by Federated Edge AI Model (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)",
-            "timestamp": "Today, 02:41 AM"
-        }
-    ]
+    if phone == "9874561230":
+        sample_txs = [
+            # 1. Fraud 1 (ATM Cash Withdrawal in Kolasib, Mizoram - Row 197115 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-AFEE16",
+                "user_phone": phone,
+                "entity": "ATM Cash Withdrawal — Kolasib Kiosk",
+                "subtext": "Suspicious Off-Hours ATM Withdrawal — Mizoram Node",
+                "channel": "Domestic ATM Debit",
+                "channel_type": "Domestic ATM Cash Withdrawal",
+                "amount": 95246.76,
+                "is_positive": 0,
+                "status": "Flagged",
+                "category": "flagged",
+                "flag_reason": "High anomaly score detected by Federated Edge AI Model (Cross-State Anomaly: Off-Hours ATM Cash Withdrawal in Kolasib, Mizoram)",
+                "timestamp": "Today, 11:17 PM",
+                "alert": {
+                    "alert_id": "ALT-AFEE16",
+                    "risk_score": 0.9650,
+                    "status": "blocked",
+                    "explanation_text": "This cross-state transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹95,246.76 in Kolasib, Mizoram heavily deviated from your normal Nagaland account activity based on federated local edge inference (Extreme Amount Spike & Cross-State Geolocation Mismatch)."
+                }
+            },
+            # 2. Fraud 2 (High-Value Retail POS Transfer in Manali, Himachal Pradesh - Row 29950 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-79739E",
+                "user_phone": phone,
+                "entity": "Manali Luxury Merchant Clearing",
+                "subtext": "Unrecognized POS Payment — Manali, Himachal Pradesh",
+                "channel": "POS Debit Terminal",
+                "channel_type": "Retail POS Terminal",
+                "amount": 95869.68,
+                "is_positive": 0,
+                "status": "Flagged",
+                "category": "flagged",
+                "flag_reason": "High anomaly score detected by Federated Edge AI Model (Severe Geolocation Anomaly: Out-of-State POS Transfer in Himachal Pradesh)",
+                "timestamp": "Today, 06:34 AM",
+                "alert": {
+                    "alert_id": "ALT-79739E",
+                    "risk_score": 0.9520,
+                    "status": "blocked",
+                    "explanation_text": "This cross-state transaction was placed on protective security hold because an unverified POS charge of ₹95,869.68 in Manali, Himachal Pradesh heavily deviated from your typical Nagaland spending profile based on on-premise federated AI (Suspicious High-Value Retail Spike & Rapid Multi-State Velocity)."
+                }
+            },
+            # 3. Legitimate (Home state - Nagaland Salary Deposit - Row 68528 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-563900",
+                "user_phone": phone,
+                "entity": "Kohima Tech Enterprises NEFT",
+                "subtext": "Direct Bank Salary Credit — Kohima Branch",
+                "channel": "NEFT Transfer",
+                "channel_type": "Direct Bank Credit",
+                "amount": 45395.28,
+                "is_positive": 1,
+                "status": "Completed",
+                "category": "income",
+                "flag_reason": None,
+                "timestamp": "Yesterday, 11:56 AM"
+            },
+            # 4. Legitimate (Home state - Nagaland Utility Payment - Row 151090 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-21ECA3",
+                "user_phone": phone,
+                "entity": "Nagaland State Power & Utilities",
+                "subtext": "Electricity & Utility Bill Payment — Wokha Branch",
+                "channel": "Mobile Banking / IMPS",
+                "channel_type": "Utility Bill Payment",
+                "amount": 20972.07,
+                "is_positive": 0,
+                "status": "Completed",
+                "category": "bills",
+                "flag_reason": None,
+                "timestamp": "Yesterday, 10:09 PM"
+            },
+            # 5. Legitimate (Neighboring state - Assam Retail Mart - Row 46226 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-719E7A",
+                "user_phone": phone,
+                "entity": "Brahmaputra Mart Dibrugarh",
+                "subtext": "Regional Retail Superstore — Dibrugarh, Assam",
+                "channel": "UPI / POS Debit",
+                "channel_type": "Retail POS Terminal",
+                "amount": 24674.35,
+                "is_positive": 0,
+                "status": "Completed",
+                "category": "shopping",
+                "flag_reason": None,
+                "timestamp": "2 days ago, 03:23 PM"
+            },
+            # 6. Legitimate (Neighboring state - Meghalaya Handicrafts - Row 192975 in Bank_Transaction_Fraud_Detection.csv)
+            {
+                "id": "TXN-46F243",
+                "user_phone": phone,
+                "entity": "Pinecone Apparel & Crafts Jowai",
+                "subtext": "Handicrafts & Clothing POS — Jowai, Meghalaya",
+                "channel": "UPI / Debit Card",
+                "channel_type": "Retail Store Payment",
+                "amount": 8020.06,
+                "is_positive": 0,
+                "status": "Completed",
+                "category": "shopping",
+                "flag_reason": None,
+                "timestamp": "3 days ago, 09:08 PM"
+            }
+        ]
+    else:
+        sample_txs = [
+            {
+                "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
+                "user_phone": phone,
+                "entity": "TechCorp India Payroll",
+                "subtext": "Employer NEFT Salary Deposit",
+                "channel": "NEFT Transfer",
+                "channel_type": "Direct Bank Credit",
+                "amount": 45000.0,
+                "is_positive": 1,
+                "status": "Completed",
+                "category": "income",
+                "flag_reason": None,
+                "timestamp": "Yesterday, 10:00 AM"
+            },
+            {
+                "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
+                "user_phone": phone,
+                "entity": "Local Supermarket Store",
+                "subtext": "Supermarket UPI / POS Payment",
+                "channel": "UPI / POS Debit",
+                "channel_type": "Retail POS Terminal",
+                "amount": 1250.0,
+                "is_positive": 0,
+                "status": "Completed",
+                "category": "shopping",
+                "flag_reason": None,
+                "timestamp": "Today, 08:15 AM"
+            },
+            {
+                "id": f"TXN-{uuid.uuid4().hex[:6].upper()}",
+                "user_phone": phone,
+                "entity": "Late-Night ATM Cash Withdrawal",
+                "subtext": "Suspicious Off-Hours ATM Withdrawal — Terminal #0842",
+                "channel": "Domestic ATM Debit",
+                "channel_type": "Domestic ATM Cash Withdrawal",
+                "amount": 25000.0,
+                "is_positive": 0,
+                "status": "Flagged",
+                "category": "flagged",
+                "flag_reason": "High anomaly score detected by Federated Edge AI Model (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)",
+                "timestamp": "Today, 02:41 AM"
+            }
+        ]
 
     for tx in sample_txs:
         cursor.execute("""
@@ -277,12 +384,13 @@ def seed_user_transactions(phone: str, name: str, conn=None):
         
         # If transaction is flagged, automatically seed a corresponding alert
         if tx["status"] == "Flagged":
-            alert_id = f"ALT-{uuid.uuid4().hex[:6].upper()}"
-            explanation_text = "This domestic transaction was placed on protective security hold because a late-night ATM cash withdrawal of ₹25,000.00 heavily deviated from your normal domestic account behavior based on federated local edge inference (Domestic Anomaly: Suspicious Off-Hours ATM Pattern / Possible Skimmer)."
+            alert_id = tx.get("alert", {}).get("alert_id") or f"ALT-{uuid.uuid4().hex[:6].upper()}"
+            risk_score = tx.get("alert", {}).get("risk_score") or 0.9420
+            explanation_text = tx.get("alert", {}).get("explanation_text") or tx.get("flag_reason") or "Flagged by federated edge model."
             cursor.execute("""
                 INSERT INTO alerts (alert_id, transaction_id, user_phone, bank_id, bank_name, risk_score, status, explanation_text, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (alert_id, tx["id"], phone, "bank_1", "Nagaland Regional Bank", 0.9420, "blocked", explanation_text, tx["timestamp"]))
+            """, (alert_id, tx["id"], phone, "bank_1", "Nagaland Regional Bank", risk_score, "blocked", explanation_text, tx["timestamp"]))
     
     if close_conn:
         conn.commit()
