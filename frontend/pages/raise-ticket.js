@@ -453,6 +453,31 @@ window.RaiseTicketPage = {
       existing.unshift(ticket);
       localStorage.setItem('fs_tickets', JSON.stringify(existing));
 
+      // Sync to backend database for branch manager if API is online
+      try {
+        fetch('http://127.0.0.1:8001/manager/tickets/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticket_id: ticket.id,
+            user_phone: ticket.phone,
+            user_name: ticket.userName,
+            bank_id: activeUser.bank || 'bank_1',
+            bank_name: ticket.bank,
+            tx_id: ticket.txId,
+            reason: ticket.reason,
+            reason_label: ticket.reasonLabel,
+            comments: ticket.comments,
+            urgency: ticket.urgency,
+            status: ticket.status,
+            status_label: ticket.statusLabel,
+            created_at: ticket.createdAt,
+            updated_at: ticket.updatedAt,
+            timeline_json: JSON.stringify(ticket.timeline)
+          })
+        }).catch(() => {});
+      } catch (e) { /* silent fallback */ }
+
       // Clear the transaction session reference
       sessionStorage.removeItem('investigation_tx');
 

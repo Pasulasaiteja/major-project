@@ -30,7 +30,7 @@ import torch
 import pandas as pd
 import shap
 from typing import Optional, List, Dict
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -146,8 +146,8 @@ def get_edge_model():
     edge_num = ['Transaction_Amount', 'Transaction_Hour']
     edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
 
-    node_enc = node_prep.transform(df[node_num + node_cat])
-    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    node_enc = np.asarray(node_prep.transform(df[node_num + node_cat]))
+    edge_enc = np.asarray(edge_prep.transform(df[edge_num + edge_cat]))
     combined = np.hstack([node_enc, edge_enc])
 
     # Local background for SHAP explainability and neighbor accounts for subgraph
@@ -213,7 +213,7 @@ class TransactionRequest(BaseModel):
     transaction_type: str
     merchant_category: str
     device_type: str
-    state: str = None
+    state: Optional[str] = None
     transaction_time: Optional[str] = None
     phone: Optional[str] = None
 
@@ -227,8 +227,8 @@ class EdgePredictionResponse(BaseModel):
     data_left_bank: bool         # always False in Flow B
     timestamp: str
     status: str
-    explanation: dict = None
-    explanation_text: str = None
+    explanation: Optional[dict] = None
+    explanation_text: Optional[str] = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -258,6 +258,9 @@ def predict_locally(tx: TransactionRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+    if node_prep is None or edge_prep is None or feature_names is None or background is None:
+        raise HTTPException(status_code=503, detail="Model preprocessors not available.")
+
     # Use the bank's own state if none provided
     state_value = tx.state or BANK_INFO.get(BANK_ID, {}).get("state", "Unknown")
 
@@ -284,8 +287,8 @@ def predict_locally(tx: TransactionRequest):
         'Device_Type':          tx.device_type,
     }])
 
-    node_enc = node_prep.transform(node_row)
-    edge_enc = edge_prep.transform(edge_row)
+    node_enc = np.asarray(node_prep.transform(node_row))
+    edge_enc = np.asarray(edge_prep.transform(edge_row))
     combined = np.hstack([node_enc, edge_enc])
 
     incoming_node_feat = torch.FloatTensor(node_enc)
@@ -358,31 +361,33 @@ def predict_locally(tx: TransactionRequest):
             "actionText": "Review Flag"
         })
         try:
-            # Also store in SQLite for active user
-            database.create_alert({
-                "transaction_id": tx_id,
-                "user_phone": getattr(tx, "phone", None) or "9876543210",
-                "bank_id": BANK_ID,
-                "bank_name": bank_name,
-                "risk_score": round(risk_score, 4),
-                "status": "blocked",
-                "explanation_text": explanation_text,
-                "timestamp": ts
-            })
-            database.add_transaction({
-                "id": tx_id,
-                "user_phone": getattr(tx, "phone", None) or "9876543210",
-                "entity": f"{tx.merchant_category} Merchant" if tx.merchant_category else "Simulated Fraud Transfer",
-                "subtext": f"{tx.transaction_type} #{tx_id}",
-                "channel": tx.transaction_type,
-                "channel_type": "AI Simulated Transfer",
-                "amount": tx.transaction_amount,
-                "is_positive": False,
-                "status": "Flagged",
-                "category": "flagged",
-                "flag_reason": "High risk score by federated model",
-                "timestamp": "Just Now"
-            })
+            # Also store in SQLite for active user if phone was explicitly provided
+            if getattr(tx, "phone", None):
+                clean_phone = tx.phone.replace("-", "").replace(" ", "")
+                database.create_alert({
+                    "transaction_id": tx_id,
+                    "user_phone": clean_phone,
+                    "bank_id": BANK_ID,
+                    "bank_name": bank_name,
+                    "risk_score": round(risk_score, 4),
+                    "status": "blocked",
+                    "explanation_text": explanation_text,
+                    "timestamp": ts
+                })
+                database.add_transaction({
+                    "id": tx_id,
+                    "user_phone": clean_phone,
+                    "entity": f"{tx.merchant_category} Merchant" if tx.merchant_category else "Simulated Fraud Transfer",
+                    "subtext": f"{tx.transaction_type} #{tx_id}",
+                    "channel": tx.transaction_type,
+                    "channel_type": "AI Simulated Transfer",
+                    "amount": tx.transaction_amount,
+                    "is_positive": False,
+                    "status": "Flagged",
+                    "category": "flagged",
+                    "flag_reason": "High risk score by federated model",
+                    "timestamp": "Just Now"
+                })
         except Exception as e:
             print("Could not persist alert to DB:", e)
 
@@ -608,6 +613,102 @@ def get_transactions(phone: Optional[str] = None):
         database.seed_demo_accounts()
         txs = database.get_transactions_by_user(clean_phone)
     return txs
+
+
+# ── Manager Portal Endpoints ─────────────────────────────────────────────────
+
+class ManagerLoginRequest(BaseModel):
+    manager_id: str
+    pin: str
+
+class TicketStatusUpdateRequest(BaseModel):
+    new_status: str
+    manager_note: str = ""
+    timeline_event: str = ""
+    timeline_note: str = ""
+
+# Status label mapping
+_STATUS_LABELS = {
+    "open": "Under Review",
+    "investigating": "Investigating",
+    "branch_visit": "Branch Visit Required",
+    "resolved": "Resolved & Closed",
+    "closed": "Resolved & Closed",
+}
+
+def _extract_bank_id_from_token(request: Request) -> str:
+    """Validate X-Manager-Token header and return the bank_id."""
+    token = request.headers.get("X-Manager-Token", "")
+    if not token.startswith("tok_manager_"):
+        raise HTTPException(status_code=401, detail="Missing or invalid manager token")
+    return token.replace("tok_manager_", "")
+
+
+@app.post("/manager/login", tags=["Manager"])
+def manager_login(body: ManagerLoginRequest):
+    """Authenticate a branch manager and return a session token."""
+    manager = database.authenticate_manager(body.manager_id, body.pin)
+    if manager is None:
+        raise HTTPException(status_code=401, detail="Invalid Manager ID or PIN")
+    token = f"tok_manager_{manager['bank_id']}"
+    return {
+        "success": True,
+        "token": token,
+        "manager": manager,
+    }
+
+
+@app.get("/manager/fraud-alerts", tags=["Manager"])
+def manager_fraud_alerts(request: Request):
+    """Return all fraud alerts for the manager's bank."""
+    bank_id = _extract_bank_id_from_token(request)
+    alerts = database.get_fraud_alerts_for_bank(bank_id)
+    return alerts
+
+
+@app.get("/manager/tickets", tags=["Manager"])
+def manager_tickets(request: Request, status: Optional[str] = None):
+    """Return investigation tickets for the manager's bank."""
+    bank_id = _extract_bank_id_from_token(request)
+    tickets = database.get_tickets_for_bank(bank_id, status=status)
+    return tickets
+
+
+@app.patch("/manager/tickets/{ticket_id}/status", tags=["Manager"])
+def manager_update_ticket_status(ticket_id: str, body: TicketStatusUpdateRequest, request: Request):
+    """Update ticket status, add manager note and timeline entry."""
+    _extract_bank_id_from_token(request)
+    status_label = _STATUS_LABELS.get(body.new_status, body.new_status.replace("_", " ").title())
+    updated = database.update_ticket_status(
+        ticket_id=ticket_id,
+        new_status=body.new_status,
+        new_status_label=status_label,
+        manager_note=body.manager_note,
+        timeline_event=body.timeline_event,
+        timeline_note=body.timeline_note,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    # If resolved, also resolve the linked alert
+    if body.new_status in ("resolved", "closed"):
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT tx_id FROM tickets WHERE ticket_id = ?", (ticket_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row["tx_id"]:
+            database.resolve_alert(row["tx_id"])
+    return {"success": True, "ticket_id": ticket_id, "new_status": body.new_status}
+
+
+@app.post("/manager/tickets/sync", tags=["Manager"])
+def manager_ticket_sync(request_body: dict):
+    """Sync a ticket from client-side localStorage into the backend database."""
+    try:
+        database.save_ticket(request_body)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 if __name__ == "__main__":

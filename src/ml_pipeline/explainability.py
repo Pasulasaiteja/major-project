@@ -64,15 +64,15 @@ def generate_shap_explanations():
     edge_num = ['Transaction_Amount', 'Transaction_Hour']
     edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
 
-    node_enc = node_prep.transform(df[node_num + node_cat])
-    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    node_enc = np.asarray(node_prep.transform(df[node_num + node_cat]))
+    edge_enc = np.asarray(edge_prep.transform(df[edge_num + edge_cat]))
     X_encoded = np.hstack([node_enc, edge_enc])
     y = df['Is_Fraud'].values
 
     X_tensor = torch.FloatTensor(X_encoded)
 
     # Load / initialize FraudGNN model
-    model = FraudGNN(node_dim=node_enc.shape[1], edge_dim=edge_enc.shape[1])
+    model = FraudGNN(node_dim=int(node_enc.shape[1]), edge_dim=int(edge_enc.shape[1]))
     
     weights_path = os.path.join(base_dir, "models", "global_weights.pth")
     if os.path.exists(weights_path):
@@ -85,17 +85,18 @@ def generate_shap_explanations():
     model.eval()
 
     # Background data: 50 normal transactions
-    normal_idx = np.where(y == 0)[0][:50]
+    y_arr = np.asarray(y)
+    normal_idx = np.where(y_arr == 0)[0][:50]
     background_data = X_tensor[normal_idx]
 
     # Fraud transactions to explain
-    fraud_idx = np.where(y == 1)[0]
+    fraud_idx = np.where(y_arr == 1)[0]
     if len(fraud_idx) == 0:
         print("No fraud cases found in this sample.")
         return
 
     # Use GradientExplainer — fully compatible with FraudGNN forward pass
-    explainer = shap.GradientExplainer(model, background_data)
+    explainer = shap.GradientExplainer(model, background_data.numpy())
 
     # Explain the first 5 fraud transactions
     targets = X_tensor[fraud_idx[:5]]

@@ -186,15 +186,15 @@ def load_and_preprocess_bank_data(file_path):
     edge_num = ['Transaction_Amount', 'Transaction_Hour']
     edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
     
-    node_enc = node_prep.transform(df[node_num + node_cat])
-    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    node_enc = np.asarray(node_prep.transform(df[node_num + node_cat]))
+    edge_enc = np.asarray(edge_prep.transform(df[edge_num + edge_cat]))
     
     y = df['Is_Fraud'].values
     X_combined = np.hstack([node_enc, edge_enc])
     
     # Maintain SMOTE to handle class imbalance
     smote = SMOTE(random_state=42)
-    X_resampled, y_resampled = smote.fit_resample(X_combined, y)
+    X_resampled, y_resampled = smote.fit_resample(X_combined, y)  # type: ignore[assignment]
     
     # Train / Test split
     X_train, X_test, y_train, y_test = train_test_split(

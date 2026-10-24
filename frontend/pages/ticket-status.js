@@ -551,6 +551,35 @@ window.TicketStatusPage = {
             </div>
             ` : ''}
 
+            ${(ticket.manager_note || ticket.managerNote) ? `
+            <div class="mt-3 p-3.5 rounded-xl bg-primary/10 border border-primary/25 flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">admin_panel_settings</span>
+              <div>
+                <span class="block font-label-mono-sm text-[10px] uppercase tracking-wider text-primary font-bold">Branch Manager Note</span>
+                <p class="font-body-sm text-[12px] text-on-surface leading-relaxed mt-0.5">${ticket.manager_note || ticket.managerNote}</p>
+              </div>
+            </div>
+            ` : ''}
+
+            ${isClosed ? `
+            <div class="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-800 flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                </div>
+                <div>
+                  <h4 class="font-headline-sm text-[13px] font-bold text-emerald-900">Issue Resolved & Account Hold Lifted</h4>
+                  <p class="font-body-sm text-[12px] text-emerald-800/90 mt-0.5">
+                    Your branch manager has verified this transaction and restored normal account access.
+                  </p>
+                </div>
+              </div>
+              <button onclick="Router.navigate('/dashboard')" class="shrink-0 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-headline-sm text-[12px] font-semibold transition-all cursor-pointer">
+                Go to Dashboard
+              </button>
+            </div>
+            ` : ''}
+
             <!-- Special Action Banner for Unclosed / Branch Visit Tickets -->
             ${isNotClosed ? `
             <div class="mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

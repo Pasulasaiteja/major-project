@@ -54,12 +54,52 @@ const Router = (() => {
       if (comp) return { component: comp, resolvedPath: '/dashboard' };
     }
 
+    if (key === '/manager' || key === '/manager-portal' || key === '/manager/dashboard' || key === '/branch-manager' || key === '/manager-dashboard') {
+      const comp = routes['/manager'] || routes['/manager-portal'] || window.ManagerPortalPage;
+      return { component: comp || window.ManagerPortalPage, resolvedPath: '/manager' };
+    }
+
+    if (key === '/manager-login' || key === '/mgr-login' || key === '/manager/login') {
+      const comp = routes['/manager-login'] || window.ManagerLoginPage;
+      return { component: comp || window.ManagerLoginPage, resolvedPath: '/manager-login' };
+    }
+
     // Default to /not-found
     return { component: routes['/not-found'], resolvedPath: '/not-found' };
   }
 
+  function loadScript(src) {
+    return new Promise((resolve) => {
+      const existing = document.querySelector(`script[src*="${src.split('?')[0]}"]`);
+      if (existing) { resolve(true); return; }
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+
   async function navigate(rawPath, force = false) {
-    const { component, resolvedPath } = resolveComponent(rawPath);
+    let { component, resolvedPath } = resolveComponent(rawPath);
+
+    // Auto-recover missing components dynamically before showing 404
+    if (!component || resolvedPath === '/not-found') {
+      const key = normalize(rawPath);
+      if (key === '/manager' || key === '/manager-portal' || key === '/manager-dashboard') {
+        if (!window.ManagerPortalPage) {
+          await loadScript('/pages/manager-portal.js?v=' + Date.now());
+        }
+        component = window.ManagerPortalPage;
+        resolvedPath = '/manager';
+      } else if (key === '/manager-login' || key === '/mgr-login' || key === '/manager/login') {
+        if (!window.ManagerLoginPage) {
+          await loadScript('/pages/manager-login.js?v=' + Date.now());
+        }
+        component = window.ManagerLoginPage;
+        resolvedPath = '/manager-login';
+      }
+    }
 
     // Avoid duplicate navigation unless initial load or forced
     if (resolvedPath === currentPath && !_initialLoad && !force) return;

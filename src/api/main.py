@@ -110,8 +110,8 @@ def get_model_and_preprocessor():
     edge_num = ['Transaction_Amount', 'Transaction_Hour']
     edge_cat = ['Transaction_Type', 'Merchant_Category', 'Device_Type']
 
-    node_enc = node_prep.transform(df[node_num + node_cat])
-    edge_enc = edge_prep.transform(df[edge_num + edge_cat])
+    node_enc = np.asarray(node_prep.transform(df[node_num + node_cat]))
+    edge_enc = np.asarray(edge_prep.transform(df[edge_num + edge_cat]))
     combined = np.hstack([node_enc, edge_enc])
     background = torch.FloatTensor(combined[:50])
 
@@ -217,7 +217,7 @@ def predict_transaction(tx: TransactionRequest):
     Returns a risk score and SHAP-based explanation.
     """
     model, node_prep, edge_prep, feature_names, background = get_model_and_preprocessor()
-    if model is None:
+    if model is None or node_prep is None or edge_prep is None or feature_names is None or background is None:
         raise HTTPException(status_code=503, detail="ML model not available. Ensure partitioned data exists.")
 
     state_value = tx.state if tx.state in ['Nagaland', 'Meghalaya', 'Uttar Pradesh'] else 'Nagaland'
@@ -238,8 +238,8 @@ def predict_transaction(tx: TransactionRequest):
         'Device_Type': tx.device_type,
     }])
 
-    node_enc = node_prep.transform(node_row)
-    edge_enc = edge_prep.transform(edge_row)
+    node_enc = np.asarray(node_prep.transform(node_row))
+    edge_enc = np.asarray(edge_prep.transform(edge_row))
     combined = np.hstack([node_enc, edge_enc])
     x_tensor = torch.FloatTensor(combined)
 
@@ -380,9 +380,7 @@ EDGE_NODE_URLS = {
     "bank_3": "http://127.0.0.1:8003",
 }
 
-MODELS_DIR   = os.path.join(BASE_DIR, "models")
-WEIGHTS_PATH = os.path.join(MODELS_DIR, "global_weights.pth")
-META_PATH    = os.path.join(MODELS_DIR, "model_meta.json")
+# MODELS_DIR, WEIGHTS_PATH, META_PATH already declared above (lines 47-49)
 
 
 @app.post("/distribute", tags=["Flow B"])

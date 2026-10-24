@@ -17,8 +17,9 @@ window.LandingPage = {
           </div>
           
           <div class="flex items-center gap-4">
-            <button onclick="Router.navigate('/investigation')" class="hidden sm:flex px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-label-mono-md hover:bg-surface-container-highest transition-colors">
-              Fraud Specialist Portal
+            <button onclick="Router.navigate('/manager-login')" class="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-label-mono-md hover:bg-surface-container-highest transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[18px] text-primary">admin_panel_settings</span>
+              Manager Login
             </button>
             <button onclick="Router.navigate('/login')" class="px-6 py-2.5 rounded-full bg-primary text-on-primary font-body-md font-semibold hover:bg-primary-container shadow-md transition-all">
               Client Login
@@ -46,7 +47,7 @@ window.LandingPage = {
           </p>
 
           <div class="flex justify-center gap-4 flex-wrap">
-            <button onclick="Router.navigate('/login')" class="px-8 py-4 rounded-full bg-primary text-on-primary font-body-md font-bold shadow-lg hover:-translate-y-1 transition-transform flex items-center gap-2">
+            <button onclick="Router.navigate('/login')" class="px-8 py-4 rounded-full bg-primary text-on-primary font-body-md font-bold shadow-lg hover:-translate-y-1 transition-transform flex items-center gap-2 cursor-pointer">
               Access Client Portal <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
           </div>

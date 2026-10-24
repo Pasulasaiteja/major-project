@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.add('/tickets-status', ticketPage);
   Router.add('/ticketstatus', ticketPage);
   Router.add('/status', ticketPage);
+
+  // Register Manager Portal routes
+  Router.add('/manager-login', window.ManagerLoginPage);
+  Router.add('/manager', window.ManagerPortalPage);
+  Router.add('/manager-portal', window.ManagerPortalPage);
   
   // Friendly 404 Fallback route with navigation options
   Router.add('/not-found', {

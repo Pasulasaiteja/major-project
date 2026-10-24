@@ -206,9 +206,17 @@ window.LoginPage = {
     }
 
     innerHTML += `
-        <div class="mt-8 pt-6 border-t border-outline-variant/30 flex items-center justify-center gap-2 text-on-surface-variant font-label-mono-sm text-[10px] uppercase">
-          <span class="material-symbols-outlined text-[14px]">lock</span>
-          <span>End-to-End Encrypted via Federated Sentinel</span>
+        <div class="mt-8 pt-5 border-t border-outline-variant/30 flex flex-col items-center gap-3">
+          <a href="/manager-login" data-path="/manager-login" onclick="event.preventDefault(); Router.navigate('/manager-login');" 
+            class="text-[12px] text-on-surface-variant hover:text-primary transition-colors font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container">
+            <span class="material-symbols-outlined text-[16px] text-amber-500">admin_panel_settings</span>
+            <span>Bank Manager Portal Access</span>
+            <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+          </a>
+          <div class="flex items-center justify-center gap-2 text-on-surface-variant font-label-mono-sm text-[10px] uppercase">
+            <span class="material-symbols-outlined text-[14px]">lock</span>
+            <span>End-to-End Encrypted via Federated Sentinel</span>
+          </div>
         </div>
       </div>
 
