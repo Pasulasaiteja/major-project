@@ -11,7 +11,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any, cast
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -249,7 +249,7 @@ def predict_transaction(tx: TransactionRequest):
     is_fraud = risk_score > 0.5
 
     # SHAP explanation
-    explainer = shap.GradientExplainer(model, background)
+    explainer = shap.GradientExplainer(model, cast(Any, background))
     sv_raw = explainer.shap_values(x_tensor)
     sv_matrix = np.array(sv_raw[0] if isinstance(sv_raw, list) else sv_raw)
     if sv_matrix.ndim > 2:

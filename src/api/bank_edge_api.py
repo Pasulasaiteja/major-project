@@ -29,7 +29,7 @@ import numpy as np
 import torch
 import pandas as pd
 import shap
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any, cast
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -305,7 +305,7 @@ def predict_locally(tx: TransactionRequest):
     status    = "blocked" if is_fraud else "cleared"
 
     # SHAP explanation: feature attribution via FraudGNN forward pass
-    explainer = shap.GradientExplainer(model, background)
+    explainer = shap.GradientExplainer(model, cast(Any, background))
     sv_raw = explainer.shap_values(x_tensor)
     sv_matrix = np.array(sv_raw[0] if isinstance(sv_raw, list) else sv_raw)
     if sv_matrix.ndim > 2:
