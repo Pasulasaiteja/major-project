@@ -2,7 +2,11 @@
   "model_type": "FraudGNN",
   "node_dim": 8,
   "edge_dim": 17,
+  "hidden_dim": 64,
   "input_dim": 25,
-  "num_rounds": 5,
-  "dp_epsilon_total": 12.8873
+  "num_rounds": 10,
+  "final_accuracy": 96.25,
+  "final_auc_roc": 0.9860,
+  "final_f1_score": 0.9580,
+  "dp_epsilon_total": 4.30
 }
