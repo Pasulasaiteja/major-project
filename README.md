@@ -105,8 +105,20 @@ Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 ---
 
 ## 🧪 Demo Credentials
+
+### 👤 Client Banking Portal (`/login`)
 - **Rajesh Sharma**: `9988776655` | MPIN: `4321` | Bank: **Nagaland Regional Bank**
 - **User 1230**: `9874561230` | MPIN: `4444` | Bank: **Nagaland Regional Bank**
+- **Demo User**: `9876543210` | MPIN: `1234` | Bank: **Nagaland Regional Bank**
+
+### 🛡️ Branch Manager Operations Portal (`/manager-login`)
+Used by bank fraud investigators to inspect flagged anomalies, review SHAP rationales, and resolve customer dispute tickets:
+
+| Regional Bank Node | Manager ID | Manager Name | PIN | Portal Route |
+| :--- | :--- | :--- | :---: | :--- |
+| **Bank 1 (Nagaland Regional Bank)** | `MGR-NRB-001` | Anurag Kapoor | `112233` | `/manager-login` $\to$ `/manager-portal` |
+| **Bank 2 (Meghalaya Regional Bank)** | `MGR-MRB-001` | Priya Deshpande | `223344` | `/manager-login` $\to$ `/manager-portal` |
+| **Bank 3 (UP Gramin Bank)** | `MGR-UPG-001` | Suresh Yadav | `334455` | `/manager-login` $\to$ `/manager-portal` |
 
 ---
 
